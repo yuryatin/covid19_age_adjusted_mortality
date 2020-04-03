@@ -189,6 +189,7 @@ else:
     subpl.set_xlim(0.0, 100.0)
     subpl.set_ylim(0.0, max(100.0 * testFuncs[res](100.0, *output[:8]) , 100.0 * testFuncs[int(secondRes)](100.0, *output[:8]) ) )
     subpl.set_xlabel('Age (years)')
+    subpl.set_ylabel('Risk of death (%)')
     subpl.set_title(testFuncsNames[int(secondRes)])
     subpl.grid()
 
