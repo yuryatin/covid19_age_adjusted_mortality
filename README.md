@@ -6,7 +6,7 @@ The code of the Python script and of the affiliated shared C library may help yo
 
 This software was desinged in two parts: a Python wrapper script to help more easily import and transform the input tabular data and finally plot the fitted curves, and a shared C library to dramatically speed up the calculation.
 
-The shared C library provides the opportunity to test arbitraty functions on condition that, in the domain between 0 and 120+, they return values between 0.0 and 1.0 - otherwise, in this scenario, it will make no sense.
+The shared C library provides the opportunity to test arbitrary functions on condition that, in the domain between 0 and 120+, they return values between 0.0 and 1.0 - otherwise, in this scenario, it will make no sense.
 
 ## C interface function
 The C library interface "fitFunction" function accepts three arrays and two other parameters:
