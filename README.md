@@ -25,3 +25,7 @@ Compatibility:
         It needs the following non-standard modules: numpy, pandas, and packages scipy and matplotlib.
         
 Python script is best launched in the MacOS or Linux terminal window. Otherwise, your Python shell or IDE may not print the progress messages from the imported C shared library.
+
+The attached deathcurve.so shared library binary file has been compiled from the attached deathcurve.c file for MacOS Catalina x86-64 using the attached Makefile.
+
+If you work on MacOS or Linux, you may download deathcurve.py, deathcurve.c, and Makefile into the same directory, then open the Terminal window, proceed to that directory with 'cd' commands, and, if you already have the clang compiler install, you may want to enter command 'make' and press 'Enter'. This will compile deathcurve.c into the shared library deathcurve.so. If you don't have the clang compiler installed, you may want install it or, alternatively, change clang to wantever compiler you wish (e.g., gcc) in Makefile before launching 'make'.
