@@ -19,7 +19,7 @@ The C library interface "fitFunction" function accepts three arrays and two othe
 So the Python script can be modified to supply case-by-case data I don't yet have access to or have failed to find.
 
 ## Fitting outcomes for other acute conditions
-Imortantly, outcome data for acute conditions, for which the infant mortality is higher than the toddler mortality or the mortality in older children, shouldn't be fed into this C interface function without changes to the tested functions inside the shared C library, because currently four out of the five tested functions are monotonic increasing functions. However, you may substitute them with "smile-shaped" functions for other acute conditions if you so desire.
+Importantly, outcome data for acute conditions, for which the infant mortality is higher than the toddler mortality or the mortality in older children, shouldn't be fed into this C interface function without changes to the tested functions inside the shared C library, because currently four out of the five tested functions are monotonic increasing functions. However, you may substitute them with "smile-shaped" functions for other acute conditions if you so desire.
 
 ## Compatibility
 ### C code:
