@@ -29,3 +29,10 @@ Python script is best launched in the MacOS or Linux terminal window. Otherwise,
 The attached deathcurve.so shared library binary file has been compiled from the attached deathcurve.c file for MacOS Catalina x86-64 using the attached Makefile.
 
 If you work on MacOS or Linux, you may download deathcurve.py, deathcurve.c, and Makefile into the same directory, then open the Terminal window, proceed to that directory with 'cd' commands, and, if you already have the clang compiler install, you may want to enter command 'make' and press 'Enter'. This will compile deathcurve.c into the shared library deathcurve.so. If you don't have the clang compiler installed, you may want install it or, alternatively, change clang to wantever compiler you wish (e.g., gcc) in Makefile before launching 'make'.
+
+The Python script when finishes should both plot the best fitted curve and save into the same directory the report file that contains the formula for the best fitted function in the formats for:
+* Python
+* Microsoft Excel
+* WolframAlpha
+
+For the sake of simplicity of the algorithm, the terms of the equation that were minimized virtualy to zero during the fitting are left in the formula. You are free to remove all close-to-zero terms manually if this doesn't change the curve.
