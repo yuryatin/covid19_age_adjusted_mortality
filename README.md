@@ -43,4 +43,4 @@ The Python script, when finishes, should both plot the best fitted curve and sav
 * WolframAlpha
 
 ## Remaining terms in the formula
-For the sake of simplicity of the algorithm, the terms of the equation that were minimized virtualy to zero during the fitting are left in the formula. You are free to remove all close-to-zero terms manually if it doesn't change the curve.
+For the sake of simplicity of the algorithm, the terms in the equation that were minimized virtualy to zero during the fitting are left in the formula. You are free to remove all close-to-zero terms manually if it doesn't change the curve.
