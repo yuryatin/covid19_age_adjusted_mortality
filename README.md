@@ -5,21 +5,23 @@ The code of the Python script and of the affiliated C shared library may help yo
 
 This software was desinged in two parts: a Python wrapper script to help more easily import and transform the input tabular data and finally plot the fitted curves, and a C shared library to dramatically speed up the calculation.
 
-The C shared library provides the opportunity to test arbitraty functions on condition that, in the domain between 0 and 120+, they return natural logarithms of values between 0.0 and 1.0 - otherwise, in this scenario, it will make no sense.
+The C shared library provides the opportunity to test arbitraty functions on condition that, in the domain between 0 and 120+, they return values between 0.0 and 1.0 - otherwise, in this scenario, it will make no sense.
 
-The C library interface fitFunction function accepts two arrays and 3 other parameters:
+The C library interface "fitFunction" function accepts two arrays and 2 other parameters:
 - an array of subjects' ages (of the data type 'double' to accomodate data that specify full dates of birth instead of years of birth)
 - an array of subjects' outcomes, where '1' is death and '0' is a more positive outcome (of the data type 'int')
 - the length of those two arrays (of the data type 'int')
 - an array of 16 double-precision floats to accomodate the calculated parameters the interface function returns
 - a pointer to an 'int' variable to return the number of the second best fitted function, if necessary.
 
-So the Python script can be modified to supply case-by-case data I don't yet have access to or failed to find.
+So the Python script can be modified to supply case-by-case data I don't yet have access to or have failed to find.
+
+Imortantly, outcome data for acute conditions, for which the infant mortality is higher than the toddler mortality, or the mortality in older children, shouldn't be fed into this C interface function without changes the tested functions inside the C shared library, because currently 4 out of the five tested functions are monotonic increasing functions. However, you may substitute them with "smile-shaped" functions for other acute conditions if you so desire.
 
 Compatibility:
     C code:
-        In order to speed up the calculation, the C code uses POSIX threads. Therefore, this code is designed for MacOS and Linux environment, for natively for Windows.
+        In order to speed up the calculation, the C code uses POSIX threads. Therefore, this code is designed for MacOS and Linux environment, not natively for Windows.
     Python script:
-        It needs the following non-standard modules: numpy, pandas, packages scipy and matplotlib.
+        It needs the following non-standard modules: numpy, pandas, and packages scipy and matplotlib.
         
-Python script is best launched in the terminal window. Otherwise, your Python shell or IDE may not print the progress messages from the imported C shared library.
+Python script is best launched in the MacOS or Linux terminal window. Otherwise, your Python shell or IDE may not print the progress messages from the imported C shared library.
