@@ -13,4 +13,5 @@ The C library interface fitFunction function accepts two arrays and 3 other para
 - the length of those two arrays (of the data type 'int')
 - an array of 16 double-precision floats to accomodate the calculated parameters the interface function returns
 - a pointer to an 'int' variable to return the number of the second best fitted function, if necessary.
+
 So the Python script can be modified to supply case-by-case data I don't yet have access to or failed to find.
