@@ -15,3 +15,11 @@ The C library interface fitFunction function accepts two arrays and 3 other para
 - a pointer to an 'int' variable to return the number of the second best fitted function, if necessary.
 
 So the Python script can be modified to supply case-by-case data I don't yet have access to or failed to find.
+
+Compatibility:
+    C code:
+        In order to speed up the calculation, the C code uses POSIX threads. Therefore, this code is designed for MacOS and Linux environment, for natively for Windows.
+    Python script:
+        It needs the following non-standard modules: numpy, pandas, packages scipy and matplotlib.
+        
+Python script is best launched in the terminal window. Otherwise, your Python shell or IDE may not print the progress messages from the imported C shared library.
