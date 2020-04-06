@@ -1,6 +1,6 @@
 /*
-This code and the code of the affiliated shared C library may help
-you fit an analytically expressed function to the COVID-19 mortality
+This code and the code of the Python wrapper module may help you
+fit an analytically expressed function to the COVID-19 mortality
 data to model age-adjusted mortality risk using maximum likelihood
 point estimates.
 
@@ -50,6 +50,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <math.h>
 #include <float.h>
 #include <pthread.h>
+#include <stdint.h>
 
 /*The macro below was created along the similar function internalLogF() to avoid function call overhead when this code's execution is required for one time only*/
 #define internalLogM(x, b0, b1, b2, b3, b4, b5, b6, b7) (log(b0 + b1 * x + b2 * pow(x, 2.0) + b3 * pow(x, 3.0) + b4 * pow(x, 4.0) + b5 * pow(x, 5.0) + b6 * pow(x, 6.0) + b7 * pow(x, 7.0)))
@@ -120,7 +121,7 @@ void * getML(void * threadId) {
     return (void *) (intptr_t) 0;
 }
 
-int step(int func, double * result, double * age, int * outcome, int length, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7, int precision) {
+int oneStep(int func, double * result, double * age, int * outcome, int length, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7, int precision) {
     func_g = func;    outcome_g = outcome;    length_g = length;    precision_g = precision;
     b0_g = b0;    b1_g = b1;    b2_g = b2;    b3_g = b3;    b4_g = b4;    b5_g = b5;    b6_g = b6;    b7_g = b7;    age_g = age;
     /* "_g" on the end of the variable's name attempts to remind the coder that the variable is global */
@@ -190,7 +191,7 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
     int repeats;
     double positionPrev;
     for (int iFunc=0; iFunc < 5; ++iFunc) {
-        //if (iFunc == 2) continue;     // this line may be uncommented to scip the longest fitted function when testing the library
+        //if (iFunc == 2) continue;     // this line may be uncommented to skip the longest fitted function when testing the library
         printf("I started fitting the mortality data to %s\n", (iFunc == 0 ? "Erf-derived function" :
                                                        (iFunc == 1 ? "Logistic-derived function" :
                                                         (iFunc == 2 ? "Gudermannian-derived function\nFitting this function takes times longer than either of the previous two functions,\nso please be patient" :
@@ -214,7 +215,7 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
                     fflush(stdout);
                 }
                 positionPrev = position;
-                position = step(iFunc, &result, ages, the_outcomes, length, b0_input, b1_input, b2_input, b3_input, b4_input, b5_input, b6_input, b7_input, iPrecision);
+                position = oneStep(iFunc, &result, ages, the_outcomes, length, b0_input, b1_input, b2_input, b3_input, b4_input, b5_input, b6_input, b7_input, iPrecision);
                 b0_index = position / 2187;
                 b1_index = position % 2187 / 729;
                 b2_index = position % 729 / 243;

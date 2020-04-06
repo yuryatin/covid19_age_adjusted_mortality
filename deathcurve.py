@@ -68,7 +68,7 @@ import scipy.special as ss
 import sys
 from  ctypes import *
 import matplotlib.pyplot as plt
-import scipy.special as ss
+from os.path import abspath
 
 def internalLog(x, b0, b1, b2, b3, b4, b5, b6, b7):
     return np.log(np.power(10.0, b0) + np.power(10.0, b1) * x + np.power(10.0, b2) * (x ** 2) + np.power(10.0, b3) * (x ** 3) + np.power(10.0, b4) * (x ** 4) + np.power(10.0, b5) * (x ** 5) + np.power(10.0, b6) * (x ** 6) + np.power(10.0, b7) * (x ** 7))
@@ -120,7 +120,7 @@ output = np.ascontiguousarray(np.zeros(18, dtype=np.float64))   # the array to c
 
 res = 0     # the variable to collect the number of the best fitted function from the C interface function
 secondRes = np.zeros(1, dtype=np.intc)     # the variable to pass by reference to the C interface function to collect the number of the second best fitted function if necessary
-clib = cdll.LoadLibrary('deathcurve.so')      # loading the compiled binary shared C library, which should be located in the same directory as this Python script
+clib = cdll.LoadLibrary(abspath('deathcurve.so'))      # loading the compiled binary shared C library, which should be located in the same directory as this Python script; absolute path is more important for Linux — not necessary for MacOS
 f = clib.fitFunction       # assigning the C interface function to this Python variable "f"
 f.arguments = [ c_void_p, c_void_p, c_int, c_void_p, c_void_p]         # declaring the data types for C function arguments
 f.restype = c_int      # declaring the data types for C function return value
