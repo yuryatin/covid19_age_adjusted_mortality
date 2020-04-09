@@ -17,9 +17,9 @@ It return a tuple of two objects of the class "bestFit" defined in the same wrap
 The attached script.py sample can be modified to supply case-by-case data I don't yet have access to or have failed to find.
 
 ## Fitting outcomes for other acute conditions
-Importantly, outcome data for acute conditions, for which the infant mortality is higher than the toddler mortality or the mortality in older children, shouldn't be fed into this C interface function without changes to the tested functions inside the shared C library, because currently four out of the five tested functions are monotonic increasing functions. However, you may substitute them with "smile-shaped" functions for other acute conditions if you so desire.
+Importantly, outcome data for acute conditions, for which the infant mortality is higher than the toddler mortality or the mortality in older children, shouldn't be fed into this Python wrapper function without changes to the tested functions inside the shared C library, because currently four out of the five main tested functions are monotonic increasing functions. However, you may substitute them with "smile-shaped" functions for other acute conditions if you so desire.
 
-Each the five main functions is supplemented with a version elevated above x-axis and squeezed down from the asymptote y = 1.0 to account for the posibility that the risk of death doesn't start from zero at birth and never asymptotically achieve 1.0. Those variants, however, don't seem to model COVID-19 mortality better, but can become useful for other acute conditions.
+Each of the five main functions is supplemented with a version elevated above the x-axis and squeezed down from the asymptote y = 1.0 to account for the posibility that the risk of death doesn't start from zero at birth and never asymptotically achieve 1.0. Those variants, however, don't seem to model COVID-19 mortality better, but can become useful for other acute conditions.
 
 ## Compatibility
 ### C code:
