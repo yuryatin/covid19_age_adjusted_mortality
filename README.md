@@ -9,9 +9,10 @@ This software was desinged in two parts: a shared C library to dramatically spee
 The shared C library provides the opportunity to test arbitrary functions on condition that, in the domain between 0 and 120+, they return values between 0.0 and 1.0 - otherwise, in this scenario, it will make no sense.
 
 ## Python wrapper interface function
-The Python wrapper interface function "fitFunctionWrapper" accepts a two columns pandas DataFrame with:
-- the first column 'age' of the numpy numerical data type, e.g., numpy.float64 or numpy.intc (the float datatype allows to accomodate data that specify full dates of birth instead of years of birth)
-- the first column 'outcome' of the numpy numerical data type, e.g., numpy.intc, where non-zero (e.g., 1) means death and zero means a more positive outcome
+The Python wrapper interface function "fitFunctionWrapper" accepts a two-column pandas DataFrame with:
+- the first column 'age' of the numpy numerical data type, e.g., numpy.float64 or numpy.intc (the float datatype allows to accomodate data that specify full dates of birth instead of years of birth),
+- the second column 'outcome' of the numpy numerical data type, e.g., numpy.intc, where non-zero (e.g., 1) means death and zero means a more positive outcome.
+It return a tuple of two objects of the class "bestFit" defined in the same wrapper module. The first object contains the calculated parameters and the number of the best fitted function.
 
 The attached script.py sample can be modified to supply case-by-case data I don't yet have access to or have failed to find.
 
