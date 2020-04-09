@@ -12,6 +12,7 @@ The shared C library provides the opportunity to test arbitrary functions on con
 The Python wrapper interface function "fitFunctionWrapper" accepts a two-column pandas DataFrame with:
 - the first column 'age' of the numpy numerical data type, e.g., numpy.float64 or numpy.intc (the float datatype allows to accomodate data that specify full dates of birth instead of years of birth),
 - the second column 'outcome' of the numpy numerical data type, e.g., numpy.intc, where non-zero (e.g., 1) means death and zero means a more positive outcome.
+
 It return a tuple of two objects of the class "bestFit" defined in the same wrapper module. The first object contains the calculated parameters and the number of the best fitted function.
 
 The attached script.py sample can be modified to supply case-by-case data I don't yet have access to or have failed to find.
@@ -31,7 +32,7 @@ Each of the five main functions is supplemented with a version elevated above th
 script.py is best launched in the MacOS or Linux terminal window. Otherwise, your Python shell or IDE may not print the progress messages from the imported shared C library.
 
 ## Attached binary shared library
-The attached libdeathcurve.so shared library binary file in the root folder was compiled from the attached deathcurve.c file for MacOS Catalina x86-64 using the attached Makefile. A shared library binary file for the older version of this software compiled for Ubuntu can be found in a separate folder.
+The attached libdeathcurve.so shared library binary file in the root folder was compiled from the attached deathcurve.c file for MacOS Catalina x86-64 using the attached Makefile. A shared library binary file for the older version of this software, which was compiled for Ubuntu, can be found in a separate folder.
 
 ## Compilation
 If you work on MacOS or Linux (tested on Ubuntu only), you may download script.py, deathcurve.py, deathcurve.c, and Makefile into the same directory, then open the Terminal window, proceed to that directory with 'cd' commands, and, if you already have the clang compiler installed, you may want to enter the command 'make' and press 'Enter'. This will compile deathcurve.c into the shared library libdeathcurve.so. If you don't have the clang compiler installed, you may want to install it or, alternatively, change clang to whatever compiler you wish (e.g., gcc) in Makefile before launching 'make'. After compilation, you may want to fetch the suggested test csv file and launch script.py in the terminal window.
