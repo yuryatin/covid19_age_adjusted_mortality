@@ -52,53 +52,92 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <pthread.h>
 #include <stdint.h>
 
-/*The macro below was created along the similar function internalLogF() to avoid function call overhead when this code's execution is required for one time only*/
-#define internalLogM(x, b0, b1, b2, b3, b4, b5, b6, b7) (log(b0 + b1 * x + b2 * pow(x, 2.0) + b3 * pow(x, 3.0) + b4 * pow(x, 4.0) + b5 * pow(x, 5.0) + b6 * pow(x, 6.0) + b7 * pow(x, 7.0)))
-#define logVerified(x) ( x <= 0.0 ? -DBL_MAX : log(x) )
+/* The macro below was created instead of a function to avoid function call overhead */
+#define internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7) (log(b0 + b1 * x + b2 * pow(x, 2.0) + b3 * pow(x, 3.0) + b4 * pow(x, 4.0) + b5 * pow(x, 5.0) + b6 * pow(x, 6.0) + b7 * pow(x, 7.0)))
+#define internalLogS(x, b0, b1, b2, b3, b4, b5) (log(b0 + b1 * x + b2 * pow(x, 2.0) + b3 * pow(x, 3.0) + b4 * pow(x, 4.0) + b5 * pow(x, 5.0)))
+#define logVerified(x) ( (x <= 0.0) && (x >= 1.0) ? -DBL_MAX : log(x) )
 #define indexConverter(x) (1 + (x > 0 ? (int)pow(3,1) : 0) + (x > 1 ? (int)pow(3,2) : 0) + (x > 2 ? (int)pow(3,3) : 0) + (x > 3 ? (int)pow(3,4) : 0) + (x > 4 ? (int)pow(3,5) : 0) + (x > 5 ? (int)pow(3,6) : 0) + (x > 6 ? (int)pow(3,7) : 0))
-#define THREADS_MAX 6561   // 3 ^ 8 - the former is the number of tests for each parameter per step, the latter is the number of fitted parameters. So many threads don't significantly impede performance in practice (though you may want to reassess that) but will use whatever number of CPU cores and threads your laptop, workstation, or server has.
+#define THREADS_MAX 6561   // 3 ^ 8 — the former is the number of tests for each parameter per step, the latter is the number of fitted parameters. So many threads don't significantly impede performance in practice (though you may want to reassess that) but will use whatever number of CPU cores and threads your laptop, workstation, or server has.
+#define NUMBER_OF_FUNCTIONS 10   // this can be used to fit fewer functions than added to this code
+#define TOTAL_NUMBER_OF_FUNCTIONS 10
 
 /* these variables were made global to make them accessible (read-only) to all threads */
-int func_g, * outcome_g, length_g, precision_g;
-double b0_g, b1_g, b2_g, b3_g, b4_g, b5_g, b6_g, b7_g, * age_g, * result_g;
+static int func_g, * outcome_g, length_g, precision_g;
+static double b0_g, b1_g, b2_g, b3_g, b4_g, b5_g, b6_g, b7_g, * age_g, * result_g;
 
-/*The function below was created along the similar macro internalLogM() to sacrifice function call overhead when this code is required to execute for more than once with the same arguments */
-double internalLogF(double x, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7) {
-    return log(b0 + b1 * x + b2 * pow(x, 2.0) + b3 * pow(x, 3.0) + b4 * pow(x, 4.0) + b5 * pow(x, 5.0) + b6 * pow(x, 6.0) + b7 * pow(x, 7.0));
-}
+/* The ten fitted functions */
 
-/* The five fitted functions */
-double erfLog(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double result = erf(internalLogM(x, b0, b1, b2, b3, b4, b5, b6, b7)) * 0.5 + 0.5;
-    return outcome ? logVerified(result) : logVerified(1.0 - result);
-}
-    
-double hyperbTan(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double result = tanh(internalLogM(x, b0, b1, b2, b3, b4, b5, b6, b7)) * 0.5 + 0.5;
+static char funcName0[] = "Erf-derived function";
+static double erfLog(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
+    double result = erf(internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7)) * 0.5 + 0.5;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
 }
 
-double GudFunc(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double result = atan(tanh(internalLogM(x, b0, b1, b2, b3, b4, b5, b6, b7))) * M_1_PI * 2.0 + 0.5;
+static char funcName1[] = "Erf-derived function with floor and ceiling";
+static double erfLogFC(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
+    double result = erf(internalLogS(x, b0, b1, b2, b3, b4, b5)) * (0.5 - b7) + 0.5 - b7 + b6;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
 }
 
-double xOverX2(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double temp = internalLogF(x, b0, b1, b2, b3, b4, b5, b6, b7);
+static char funcName2[] = "Logistic-derived function";
+static double hyperbTan(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
+    double result = tanh(internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7)) * 0.5 + 0.5;
+    return outcome ? logVerified(result) : logVerified(1.0 - result);
+}
+
+static char funcName3[] = "Logistic-derived function with floor and ceiling";
+static double hyperbTanFC(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
+    double result = tanh(internalLogS(x, b0, b1, b2, b3, b4, b5)) * (0.5 - b7) + 0.5 - b7 + b6;
+    return outcome ? logVerified(result) : logVerified(1.0 - result);
+}
+
+#define LONG_FUNC_NUMBER 4
+static char funcName4[] = "Gudermannian-derived function";
+static double GudFunc(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
+    double result = atan(tanh(internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7))) * M_1_PI * 4.0 * (0.5 - b7) + 0.5 - b7 + b6;
+    return outcome ? logVerified(result) : logVerified(1.0 - result);
+}
+
+static char funcName5[] = "Gudermannian-derived function with floor and ceiling";
+static double GudFuncFC(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
+    double result = atan(tanh(internalLogS(x, b0, b1, b2, b3, b4, b5))) * M_1_PI * 4.0 * (0.5 - b7) + 0.5 - b7 + b6;
+    return outcome ? logVerified(result) : logVerified(1.0 - result);
+}
+
+static char funcName6[] = "Algebraic function derived from x over sqrt(1 + x^2)";
+static double xOverX2(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
+    double temp = internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7);
     double result = temp * pow(1.0 + pow(temp, 2.0), -0.5) * 0.5 + 0.5;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
 }
 
-double xOverAbs(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double temp = internalLogF(x, b0, b1, b2, b3, b4, b5, b6, b7);
+static char funcName7[] = "Algebraic function derived from x over sqrt(1 + x^2) with floor and ceiling";
+static double xOverX2FC(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
+    double temp = internalLogS(x, b0, b1, b2, b3, b4, b5);
+    double result = temp * pow(1.0 + pow(temp, 2.0), -0.5) * (0.5 - b7) + 0.5 - b7 + b6;
+    return outcome ? logVerified(result) : logVerified(1.0 - result);
+}
+
+static char funcName8[] = "Algebraic function derived from x over (1 + abs(x))";
+static double xOverAbs(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
+    double temp = internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7);
     double result = temp / (1 +fabs(temp)) * 0.5 + 0.5;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
 }
 
-/* array of function pointers to facilitate their calls by numbers */
-double (*testFunc[5])(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7);
+static char funcName9[] = "Algebraic function derived from x over (1 + abs(x)) with floor and ceiling";
+static double xOverAbsFC(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
+    double temp = internalLogS(x, b0, b1, b2, b3, b4, b5);
+    double result = temp / (1 +fabs(temp)) * (0.5 - b7) + 0.5 - b7 + b6;
+    return outcome ? logVerified(result) : logVerified(1.0 - result);
+}
 
-void * getML(void * threadId) {
+/* array of function pointers to facilitate their calls by numbers */
+static double (*testFunc[TOTAL_NUMBER_OF_FUNCTIONS])(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7);
+
+static char * funcNames[TOTAL_NUMBER_OF_FUNCTIONS];
+
+static void * getML(void * threadId) {
     result_g[(int)threadId] = 0.0;
     int b0_l = (int)threadId / 2187 - 1;
     int b1_l = (int)threadId % 2187 / 729 - 1;
@@ -121,7 +160,7 @@ void * getML(void * threadId) {
     return (void *) (intptr_t) 0;
 }
 
-int oneStep(int func, double * result, double * age, int * outcome, int length, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7, int precision) {
+static int oneStep(int func, double * result, double * age, int * outcome, int length, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7, int precision) {
     func_g = func;    outcome_g = outcome;    length_g = length;    precision_g = precision;
     b0_g = b0;    b1_g = b1;    b2_g = b2;    b3_g = b3;    b4_g = b4;    b5_g = b5;    b6_g = b6;    b7_g = b7;    age_g = age;
     /* "_g" on the end of the variable's name attempts to remind the coder that the variable is global */
@@ -161,25 +200,52 @@ int oneStep(int func, double * result, double * age, int * outcome, int length, 
     return position;
 }
 
-/* the function that needs to be called from Python script */
+/* the function that needs to be called from the Python (wrapper) script */
 int fitFunction(double * ages, int * the_outcomes, int length, double * output, int * secondRes) {
     testFunc[0] = &erfLog;
-    testFunc[1] = &hyperbTan;
-    testFunc[2] = &GudFunc;
-    testFunc[3] = &xOverX2;
-    testFunc[4] = &xOverAbs;
-    double finalResults[5][9];
+    testFunc[1] = &erfLogFC;
+    testFunc[2] = &hyperbTan;
+    testFunc[3] = &hyperbTanFC;
+    testFunc[4] = &GudFunc;
+    testFunc[5] = &GudFuncFC;
+    testFunc[6] = &xOverX2;
+    testFunc[7] = &xOverX2FC;
+    testFunc[8] = &xOverAbs;
+    testFunc[9] = &xOverAbsFC;
+    funcNames[0] = funcName0;
+    funcNames[1] = funcName1;
+    funcNames[2] = funcName2;
+    funcNames[3] = funcName3;
+    funcNames[4] = funcName4;
+    funcNames[5] = funcName5;
+    funcNames[6] = funcName6;
+    funcNames[7] = funcName7;
+    funcNames[8] = funcName8;
+    funcNames[9] = funcName9;
+    double finalResults[NUMBER_OF_FUNCTIONS][9];
     double result = 0.0;
+    double resultPrev = 0.0;
     int position = 0;
-    /* Initial parameters (powers of coefficients), which can be changed */
-    double b0_input = -14.0;
-    double b1_input = -3.0;
-    double b2_input = -10.0;
-    double b3_input = -5.0;
-    double b4_input = -20.0;
-    double b5_input = -20.0;
-    double b6_input = -21.0;
-    double b7_input = -30.0;
+    /* Initial parameters (powers of coefficients), which can be changed.
+    Both the speed of fitting and the local maximum where you're gonna get stuck highly depend on the choice of these initial parameters.
+    Play with them to get better fitting. */
+    /* double b0_input_seed = -15.2375;
+    double b1_input_seed = -2.4458;
+    double b2_input_seed = -18.8121;
+    double b3_input_seed = -6.0719;
+    double b4_input_seed = -22.7201;
+    double b5_input_seed = -26.0204;
+    double b6_input_seed = -30.3301;
+    double b7_input_seed = -35.3301; */
+    double b0_input_seed = -13.9234;
+    double b1_input_seed = -2.5907;
+    double b2_input_seed = -4.4888;
+    double b3_input_seed = -18.2855;
+    double b4_input_seed = -22.5474;
+    double b5_input_seed = -78.2407;
+    double b6_input_seed = -82.5504;
+    double b7_input_seed = -87.5504;
+    double b0_input, b1_input, b2_input, b3_input, b4_input, b5_input, b6_input, b7_input;
     int b0_index = 0;
     int b1_index = 0;
     int b2_index = 0;
@@ -189,33 +255,51 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
     int b6_index = 0;
     int b7_index = 0;
     int repeats;
+    int repeatsWarning = 0;
     double positionPrev;
-    for (int iFunc=0; iFunc < 5; ++iFunc) {
-        //if (iFunc == 2) continue;     // this line may be uncommented to skip the longest fitted function when testing the library
-        printf("I started fitting the mortality data to %s\n", (iFunc == 0 ? "Erf-derived function" :
-                                                       (iFunc == 1 ? "Logistic-derived function" :
-                                                        (iFunc == 2 ? "Gudermannian-derived function\nFitting this function takes times longer than either of the previous two functions,\nso please be patient" :
-                                                         (iFunc == 3 ? "Algebraic function derived from x over sqrt(1 + x^2)" :
-                                                          "Algebraic function derived from x over (1 + abs(x))"
-                                                          )
-                                                         )
-                                                        )
-                                                       )
-               );
+    for (int iFunc=0; iFunc < NUMBER_OF_FUNCTIONS; ++iFunc) {
+        b0_input = b0_input_seed;
+        b1_input = b1_input_seed;
+        b2_input = b2_input_seed;
+        b3_input = b3_input_seed;
+        b4_input = b4_input_seed;
+        b5_input = b5_input_seed;
+        b6_input = b6_input_seed;
+        b7_input = b7_input_seed;
+        repeatsWarning = 0;
+        result = 0.0;
+        resultPrev = 0.0;
+        printf("I started fitting the mortality data to %s\n", funcNames[iFunc]);
         fflush(stdout);
         for (int iPrecision=0; iPrecision < 5; ++iPrecision) {
+            ++repeatsWarning;
             printf("\tFitting with precision %.4f\n", pow(10, -iPrecision));
+            if (repeatsWarning % 20 == 19) {
+                printf("***********************************************************************************\n\t\tIf you start to suspect that your computer got into a dead loop\n\t\t— Nope, the ML estimate is still increasing:\n\t\t\tit is %14.10f now\n", result);
+                if (resultPrev) printf("\t\t\t  vs. %14.10f, which was 20 lines above\n", resultPrev);
+                puts("***********************************************************************************");
+                resultPrev = result;
+            }
             fflush(stdout);
             repeats = 0;
             position = 0;
             while (position != 3280) {
                 if (repeats > 25 && iPrecision > 0) {
+                    ++repeatsWarning;
                     --iPrecision;
                     printf("\tFitting with precision %.4f again because slope ascending is too slow\n", pow(10, -iPrecision));
+                    if (repeatsWarning % 20 == 19) {
+                        printf("***********************************************************************************\n\t\tIf you start to suspect that your computer got into a dead loop\n\t\t— Nope, the ML estimate is still increasing:\n\t\t\tit is %14.10f now\n", result);
+                        if (resultPrev) printf("\t\t\t  vs. %14.10f, which was 20 lines above\n", resultPrev);
+                        puts("***********************************************************************************");
+                        resultPrev = result;
+                    }
                     fflush(stdout);
                 }
                 positionPrev = position;
                 position = oneStep(iFunc, &result, ages, the_outcomes, length, b0_input, b1_input, b2_input, b3_input, b4_input, b5_input, b6_input, b7_input, iPrecision);
+                //printf("%15.10f\t", result);      // this may be uncommented to print each ML estimate along the way
+                fflush(stdout);
                 b0_index = position / 2187;
                 b1_index = position % 2187 / 729;
                 b2_index = position % 729 / 243;
@@ -247,67 +331,44 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
     }
     //finalResults[2][8] = -150.0;    // this line can be uncommented to arbitrarily force any of the five functions with their best fitted parameters be be reported to Python script for plotting and saving their fitted formulas
     
-    /* the output below help compare the five functions in terms of their fit to the data */
-    printf("\nFunction 1 erf parameters:\t\t\tML estimate\t%.16f\n\t%e + %ex + %ex^2 + %ex^3 + %ex^4 + %ex^5 + %ex^6 + %ex^7\n", finalResults[0][8],
-           pow(10.0, finalResults[0][0]),
-           pow(10.0, finalResults[0][1]),
-           pow(10.0, finalResults[0][2]),
-           pow(10.0, finalResults[0][3]),
-           pow(10.0, finalResults[0][4]),
-           pow(10.0, finalResults[0][5]),
-           pow(10.0, finalResults[0][6]),
-           pow(10.0, finalResults[0][7]));
-    printf("\nFunction 2 tanh parameters:\t\tML estimate\t%.16f\n\t%e + %ex + %ex^2 + %ex^3 + %ex^4 + %ex^5 + %ex^6 + %ex^7\n", finalResults[1][8],
-           pow(10.0, finalResults[1][0]),
-           pow(10.0, finalResults[1][1]),
-           pow(10.0, finalResults[1][2]),
-           pow(10.0, finalResults[1][3]),
-           pow(10.0, finalResults[1][4]),
-           pow(10.0, finalResults[1][5]),
-           pow(10.0, finalResults[1][6]),
-           pow(10.0, finalResults[1][7]));
-    printf("\nFunction 3 GudFunc parameters:\t\tML estimate\t%.16f\n\t%e + %ex + %ex^2 + %ex^3 + %ex^4 + %ex^5 + %ex^6 + %ex^7\n", finalResults[2][8],
-           pow(10.0, finalResults[2][0]),
-           pow(10.0, finalResults[2][1]),
-           pow(10.0, finalResults[2][2]),
-           pow(10.0, finalResults[2][3]),
-           pow(10.0, finalResults[2][4]),
-           pow(10.0, finalResults[2][5]),
-           pow(10.0, finalResults[2][6]),
-           pow(10.0, finalResults[2][7]));
-    printf("\nFunction 4 x over x2 parameters:\t\tML estimate\t%.16f\n\t%e + %ex + %ex^2 + %ex^3 + %ex^4 + %ex^5 + %ex^6 + %ex^7\n", finalResults[3][8],
-           pow(10.0, finalResults[3][0]),
-           pow(10.0, finalResults[3][1]),
-           pow(10.0, finalResults[3][2]),
-           pow(10.0, finalResults[3][3]),
-           pow(10.0, finalResults[3][4]),
-           pow(10.0, finalResults[3][5]),
-           pow(10.0, finalResults[3][6]),
-           pow(10.0, finalResults[3][7]));
-    printf("\nFunction 5 x over abs x parameters:\tML estimate\t%.16f\n\t%e + %ex + %ex^2 + %ex^3 + %ex^4 + %ex^5 + %ex^6 + %ex^7\n\n", finalResults[4][8],
-           pow(10.0, finalResults[4][0]),
-           pow(10.0, finalResults[4][1]),
-           pow(10.0, finalResults[4][2]),
-           pow(10.0, finalResults[4][3]),
-           pow(10.0, finalResults[4][4]),
-           pow(10.0, finalResults[4][5]),
-           pow(10.0, finalResults[4][6]),
-           pow(10.0, finalResults[4][7]));
+    /* the output below help compare the ten functions in terms of their fit to the data */
+    for (int iFunc=0; iFunc < NUMBER_OF_FUNCTIONS; ++iFunc) {
+        printf("\nFunction %i:\t\t%s\n\tML estimate:\t%.16f\n\tParameters:\t%e %e %e %e %e %e %e %e\n\tPowers:     \t%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n",
+               iFunc,
+               funcNames[iFunc],
+               finalResults[iFunc][8],
+               pow(10.0, finalResults[iFunc][0]),
+               pow(10.0, finalResults[iFunc][1]),
+               pow(10.0, finalResults[iFunc][2]),
+               pow(10.0, finalResults[iFunc][3]),
+               pow(10.0, finalResults[iFunc][4]),
+               pow(10.0, finalResults[iFunc][5]),
+               pow(10.0, finalResults[iFunc][6]),
+               pow(10.0, finalResults[iFunc][7]),
+               finalResults[iFunc][0],
+               finalResults[iFunc][1],
+               finalResults[iFunc][2],
+               finalResults[iFunc][3],
+               finalResults[iFunc][4],
+               finalResults[iFunc][5],
+               finalResults[iFunc][6],
+               finalResults[iFunc][7]);
+    }
     fflush(stdout);
     int resulting = 0;
     int mainresulting = 0;
-    for (int i=1; i < 5; ++i)
-        if (finalResults[i][8] > finalResults[resulting][8])
-            resulting = i;
+    for (int iFunc=1; iFunc < NUMBER_OF_FUNCTIONS; ++iFunc)
+        if (finalResults[iFunc][8] > finalResults[resulting][8])
+            resulting = iFunc;
     for (int i=0; i < 9; ++i) output[i] = finalResults[resulting][i];
     mainresulting = resulting;
     /* since the Gudermannian-derived function used here can be non-monotonic, whenever it seems the best fit, the second best fit is reported as well */
-    if (resulting == 2) {
+    if (resulting == LONG_FUNC_NUMBER && resulting == LONG_FUNC_NUMBER + 1) {
         resulting = 0;
-        for (int i=1; i < 5; ++i) {
-            if (i == 2) continue;
-            if (finalResults[i][8] > finalResults[resulting][8])
-                resulting = i;
+        for (int iFunc=1; iFunc < NUMBER_OF_FUNCTIONS; ++iFunc) {
+            if (iFunc == LONG_FUNC_NUMBER && iFunc == LONG_FUNC_NUMBER + 1) continue;
+            if (finalResults[iFunc][8] > finalResults[resulting][8])
+                resulting = iFunc;
         }
         for (int i=0; i < 9; ++i) output[9 + i] = finalResults[resulting][i];
         *secondRes = resulting;

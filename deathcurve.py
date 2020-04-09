@@ -65,134 +65,199 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import numpy as np
 import pandas as pd
 import scipy.special as ss
-import sys
-from  ctypes import *
+from ctypes import *
 import matplotlib.pyplot as plt
 from os.path import abspath
+from typing import Tuple
 
-def internalLog(x, b0, b1, b2, b3, b4, b5, b6, b7):
-    return np.log(np.power(10.0, b0) + np.power(10.0, b1) * x + np.power(10.0, b2) * (x ** 2) + np.power(10.0, b3) * (x ** 3) + np.power(10.0, b4) * (x ** 4) + np.power(10.0, b5) * (x ** 5) + np.power(10.0, b6) * (x ** 6) + np.power(10.0, b7) * (x ** 7))
 
-def erf(x, b0, b1, b2, b3, b4, b5, b6, b7):
-    return ss.erf(internalLog(x, b0, b1, b2, b3, b4, b5, b6, b7)) * 0.5 + 0.5
+class bestFit():
+        
+    def output(self):
+        return self.outputText.format(np.power(10.0, self.b0),np.power(10.0, self.b1),np.power(10.0, self.b2),np.power(10.0, self.b3),np.power(10.0, self.b4),np.power(10.0, self.b5),np.power(10.0, self.b6),np.power(10.0, self.b7))
+
+    def internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7):
+        return np.log(np.power(10.0, b0) + np.power(10.0, b1) * x + np.power(10.0, b2) * (x ** 2) + np.power(10.0, b3) * (x ** 3) + np.power(10.0, b4) * (x ** 4) + np.power(10.0, b5) * (x ** 5) + np.power(10.0, b6) * (x ** 6) + np.power(10.0, b7) * (x ** 7))
     
-def hyperbTan(x, b0, b1, b2, b3, b4, b5, b6, b7):
-    return np.tanh(internalLog(x, b0, b1, b2, b3, b4, b5, b6, b7)) * 0.5 + 0.5
+    def internalLogS(x, b0, b1, b2, b3, b4, b5):
+        return np.log(np.power(10.0, b0) + np.power(10.0, b1) * x + np.power(10.0, b2) * (x ** 2) + np.power(10.0, b3) * (x ** 3) + np.power(10.0, b4) * (x ** 4) + np.power(10.0, b5) * (x ** 5))
 
-def GudFunc(x, b0, b1, b2, b3, b4, b5, b6, b7):
-    return np.arctan(np.tanh(internalLog(x, b0, b1, b2, b3, b4, b5, b6, b7))) * 2.0 / np.pi + 0.5
-
-def xOverX2(x, b0, b1, b2, b3, b4, b5, b6, b7):
-    temp = internalLog(x, b0, b1, b2, b3, b4, b5, b6, b7)
-    return temp * np.power(1 +np.power(temp, 2), -0.5) * 0.5 + 0.5
-
-def xOverAbs(x, b0, b1, b2, b3, b4, b5, b6, b7):
-    temp = internalLog(x, b0, b1, b2, b3, b4, b5, b6, b7)
-    return 0.5 * temp / (1 +np.abs(temp)) + 0.5
-
-testFuncs = [ erf, hyperbTan, GudFunc, xOverX2, xOverAbs ]     # list of functions to facilitate their calls by numbers
-testFuncsNames = ['Erf-derived function', 'Logistic-derived function', 'Gudermannian-derived function', 'Algebraic function derived from x over sqrt(1 + x^2)', 'Algebraic function derived from x over (1 + abs(x))' ]
-
-# the section below is designed to import the case-by-case table from URL https://www.kaggle.com/kimjihoo/coronavirusdataset#PatientInfo.csv
-df = pd.read_csv('PatientInfo.csv')[['birth_year','symptom_onset_date','confirmed_date','state','released_date','deceased_date']]
-df[['symptom_onset_date']] = pd.to_datetime(df['symptom_onset_date'])
-df[['confirmed_date']] = pd.to_datetime(df['confirmed_date'])
-df[['deceased_date']] = pd.to_datetime(df['deceased_date'])
-df[['released_date']] = pd.to_datetime(df['released_date'])
-latestDate = df[['symptom_onset_date','confirmed_date','deceased_date','released_date']].max(skipna=True).max()
-df['earliest_date'] = df[['symptom_onset_date','confirmed_date']].min(skipna=True, axis=1)
-df['death_on_date'] = df['deceased_date'] - df['earliest_date']
-
-df = df[(latestDate - df.earliest_date > df['death_on_date'].dropna().quantile(.98)) & (df.birth_year.isna()==False)]    # it was an arbitrary decision to remove all cases that are younger than 98%-percentile of days-to-death from first symptoms or diagnosis confirmation whichever is earlier. You can adjust it to make with a more rigorous rationale. If left all cases (especially on the rising pandemics), the mortality is expected to be underestimated
-df['age'] = 2020 - df['birth_year']       # in case the dataset has full birth date instead of birth year, the data type for this variable was left float64/double both for numpy/pandas and the shared C library
-df['outcome'] = np.where(df.state == 'deceased', 1, 0)
-df['age'] = np.where(df.age == 0.0, 1e-8, df.age)
-df = df[['age','outcome']]
-
-# when working with these arrays from the shared C library, it is critical for them be continuous in memory
-age = np.ascontiguousarray(df['age'], dtype=np.float64)
-outcome = np.ascontiguousarray(df['outcome'], dtype=np.intc)
-
-output = np.ascontiguousarray(np.zeros(18, dtype=np.float64))   # the array to collect fitted parameters and ML estimates from the shared C library
-# the first 9 values are reserved for the best fitted function
-# the second 9 values are reserved for the second best fitted function
-# among those 9, the first 8 are for the fitted coefficients and the 9th is for the (logarithmic) ML point estimate
-
-res = 0     # the variable to collect the number of the best fitted function from the C interface function
-secondRes = np.zeros(1, dtype=np.intc)     # the variable to pass by reference to the C interface function to collect the number of the second best fitted function if necessary
-clib = cdll.LoadLibrary(abspath('deathcurve.so'))      # loading the compiled binary shared C library, which should be located in the same directory as this Python script; absolute path is more important for Linux — not necessary for MacOS
-f = clib.fitFunction       # assigning the C interface function to this Python variable "f"
-f.arguments = [ c_void_p, c_void_p, c_int, c_void_p, c_void_p]         # declaring the data types for C function arguments
-f.restype = c_int      # declaring the data types for C function return value
-res = f(c_void_p(age.ctypes.data), c_void_p(outcome.ctypes.data), age.size, c_void_p(output.ctypes.data), c_void_p(secondRes.ctypes.data))   # calling the C interface function
-
-text_output = ''            # string to collect the text to save in the report text file and to print in the terminal
-
-if(res==0):
-    text_output += '\nBest fit is:\n\n\tPython\n\tscipy.special.erf(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ))/2 + 0.5\n\n\tMicrosoft Excel\n\tERF(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ))/2 + 0.5\n\n\tWolframAlpha\n\tplot | erf(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ))/2 + 0.5 | x = 0 to 100\n\n'.format(np.power(10.0,output[0]),np.power(10.0,output[1]),np.power(10.0,output[2]),np.power(10.0,output[3]),np.power(10.0,output[4]),np.power(10.0,output[5]),np.power(10.0,output[6]),np.power(10.0,output[7]))
-elif(res==1):
-    text_output += '\nBest fit is:\n\n\tPython\n\tmath.tanh(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ))/2 + 0.5\n\n\tMicrosoft Excel\n\tTANH(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ))/2 + 0.5\n\n\tWolframAlpha\n\tplot | tanh(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ))/2 + 0.5 | x = 0 to 100\n\n'.format(np.power(10.0,output[0]),np.power(10.0,output[1]),np.power(10.0,output[2]),np.power(10.0,output[3]),np.power(10.0,output[4]),np.power(10.0,output[5]),np.power(10.0,output[6]),np.power(10.0,output[7]))
-elif(res==3):
-    text_output += '\nBest fit is:\n\n\tPython\n\t0.5 * (math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ) )/((1 + (math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ))**2)**0.5) + 0.5\n\n\tMicrosoft Excel\n\t0.5 * (LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ) )/((1 + (LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ))^2)^0.5) + 0.5\n\n\tWolframAlpha\n\tplot | 0.5 * (log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ) )/((1 + (log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ))^2)^0.5) + 0.5 | x = 0 to 100\n\n'.format(np.power(10.0,output[0]),np.power(10.0,output[1]),np.power(10.0,output[2]),np.power(10.0,output[3]),np.power(10.0,output[4]),np.power(10.0,output[5]),np.power(10.0,output[6]),np.power(10.0,output[7]))
-elif(res==4):
-    text_output += '\nBest fit is:\n\n\tPython\n\t0.5 * (math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ) )/(1 + abs(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ))) + 0.5\n\n\tMicrosoft Excel\n\t0.5 * (LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ) )/(1 + ABS(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ))) + 0.5\n\n\tWolframAlpha\n\tplot | 0.5 * log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7)/(1 + abs(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ))) + 0.5 | x = 0 to 100\n\n'.format(np.power(10.0,output[0]),np.power(10.0,output[1]),np.power(10.0,output[2]),np.power(10.0,output[3]),np.power(10.0,output[4]),np.power(10.0,output[5]),np.power(10.0,output[6]),np.power(10.0,output[7]))
-elif(res==2):
-    text_output += '\nBest fit is:\n\n\tPython\n\t2.0 * math.atan(math.tanh(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) )))/math.pi + 0.5\n\n\tMicrosoft Excel\n\t2.0 * ATAN(TANH(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) )))/ PI() + 0.5\n\n\tWolframAlpha\n\tplot | 2.0 * atan(tanh(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 )))/pi + 0.5 | x = 0 to 100\n\n\n'.format(np.power(10.0,output[0]),np.power(10.0,output[1]),np.power(10.0,output[2]),np.power(10.0,output[3]),np.power(10.0,output[4]),np.power(10.0,output[5]),np.power(10.0,output[6]),np.power(10.0,output[7]))
-    if(secondRes==0):
-        text_output += '\nSecond best fit is:\n\n\tPython\n\tscipy.special.erf(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ))/2 + 0.5\n\n\tMicrosoft Excel\n\tERF(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ))/2 + 0.5\n\n\tWolframAlpha\n\tplot | erf(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ))/2 + 0.5 | x = 0 to 100\n\n'.format(np.power(10.0,output[9]),np.power(10.0,output[10]),np.power(10.0,output[11]),np.power(10.0,output[12]),np.power(10.0,output[13]),np.power(10.0,output[14]),np.power(10.0,output[15]),np.power(10.0,output[16]))
-    elif(secondRes==1):
-        text_output += '\nSecond best fit is:\n\n\tPython\n\tmath.tanh(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ))/2 + 0.5\n\n\tMicrosoft Excel\n\tTANH(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ))/2 + 0.5\n\n\tWolframAlpha\n\tplot | tanh(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ))/2 + 0.5 | x = 0 to 100\n\n'.format(np.power(10.0,output[9]),np.power(10.0,output[10]),np.power(10.0,output[11]),np.power(10.0,output[12]),np.power(10.0,output[13]),np.power(10.0,output[14]),np.power(10.0,output[15]),np.power(10.0,output[16]))
-    elif(secondRes==3):
-        text_output += '\nSecond best fit is:\n\n\tPython\n\t0.5 * (math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ) )/((1 + (math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ))**2)**0.5) + 0.5\n\n\tMicrosoft Excel\n\t0.5 * (LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ) )/((1 + (LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ))^2)^0.5) + 0.5\n\n\tWolframAlpha\n\tplot | 0.5 * (log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ) )/((1 + (log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ))^2)^0.5) + 0.5 | x = 0 to 100\n\n'.format(np.power(10.0,output[9]),np.power(10.0,output[10]),np.power(10.0,output[11]),np.power(10.0,output[12]),np.power(10.0,output[13]),np.power(10.0,output[14]),np.power(10.0,output[15]),np.power(10.0,output[16]))
-    elif(secondRes==4):
-        text_output += '\nSecond best fit is:\n\n\tPython\n\t0.5 * (math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ) )/(1 + abs(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ))) + 0.5\n\n\tMicrosoft Excel\n\t0.5 * (LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ) )/(1 + ABS(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ))) + 0.5\n\n\tWolframAlpha\n\tplot | 0.5 * log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7)/(1 + abs(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ))) + 0.5 | x = 0 to 100\n\n'.format(np.power(10.0,output[9]),np.power(10.0,output[10]),np.power(10.0,output[11]),np.power(10.0,output[12]),np.power(10.0,output[13]),np.power(10.0,output[14]),np.power(10.0,output[15]),np.power(10.0,output[16]))
-
-print(text_output)
-
-#Saving the report text file in the same directory
-with open('report.txt', 'w') as f:
-    f.write(text_output)
-
-
-# Plotting the graph
-x = np.arange(0.01, 200.0, 0.01)
-y1 = np.array([100.0 * testFuncs[res](i, *output[:8]) for i in x])
-
-
-if(res==2):
-    y2 = np.array([100.0 * testFuncs[int(secondRes)](i, *output[9:17]) for i in x])
+    def erf(self, x):
+        return ss.erf(bestFit.internalLogL(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5, self.b6, self.b7)) * 0.5 + 0.5
     
-    fig, subpl = plt.subplots( 1, 2, figsize=(12,6))
-    fig.suptitle('Age-adjusted COVID-19 mortality', fontsize=16)
-    fig.set_figheight(6)
-    fig.set_figwidth(12)
-    subpl[0].plot(x, y1)
-    subpl[0].set_xlim(0.0, 100.0)
-    subpl[0].set_ylim(0.0, max(100.0 * testFuncs[res](100.0, *output[:8]) , 100.0 * testFuncs[int(secondRes)](100.0, *output[9:17]) ) )
-    subpl[0].set_xlabel('Age (years)')
-    subpl[0].set_ylabel('Risk of death (%)')
-    subpl[0].set_title(testFuncsNames[res])
-    subpl[0].grid()
+    def erfFC(self, x):
+        return ss.erf(bestFit.internalLogS(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5)) * (0.5 - self.b7) + 0.5 - self.b7 + self.b6
     
-    subpl[1].plot(x, y2)
-    subpl[1].set_xlim(0.0, 100.0)
-    subpl[1].set_ylim(0.0, max(100.0 * testFuncs[res](100.0, *output[:8]) , 100.0 * testFuncs[int(secondRes)](100.0, *output[9:17]) ) )
-    subpl[1].set_xlabel('Age (years)')
-    subpl[1].set_title(testFuncsNames[int(secondRes)])
-    subpl[1].grid()
-else:
-    fig, subpl = plt.subplots( 1, 1, figsize=(6,6))
-    fig.suptitle('Age-adjusted COVID-19 mortality', fontsize=16)
-    fig.set_figheight(6)
-    fig.set_figwidth(6)
-    subpl.plot(x, y1)
-    subpl.set_xlim(0.0, 100.0)
-    subpl.set_ylim(0.0, max(100.0 * testFuncs[res](100.0, *output[:8]) , 100.0 * testFuncs[int(secondRes)](100.0, *output[:8]) ) )
-    subpl.set_xlabel('Age (years)')
-    subpl.set_ylabel('Risk of death (%)')
-    subpl.set_title(testFuncsNames[int(secondRes)])
-    subpl.grid()
+    def hyperbTan(self, x):
+        return np.tanh(bestFit.internalLogL(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5, self.b6, self.b7)) * 0.5 + 0.5
+    
+    def hyperbTanFC(self, x):
+        return np.tanh(bestFit.internalLogS(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5)) * (0.5 - self.b7) + 0.5 - self.b7 + self.b6
 
-#Saving the graph image file in the same directory
-fig.savefig("result.png")
-plt.show()
+    def GudFunc(self, x):
+        return np.arctan(np.tanh(bestFit.internalLogL(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5, self.b6, self.b7))) * 2.0 / np.pi + 0.5
+    
+    def GudFuncFC(self, x):
+        return np.arctan(np.tanh(bestFit.internalLogS(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5))) * 4.0 * (0.5 - self.b7) / np.pi + 0.5 - self.b7 + self.b6
+
+    def xOverX2(self, x):
+        temp = bestFit.internalLogL(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5, self.b6, self.b7)
+        return temp * np.power(1 + np.power(temp, 2), -0.5) * 0.5 + 0.5
+    
+    def xOverX2FC(self, x):
+        temp = bestFit.internalLogS(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5)
+        return temp * np.power(1 + np.power(temp, 2), -0.5) * (0.5 - self.b7) + 0.5 - self.b7 + self.b6
+
+    def xOverAbs(self, x):
+        temp = bestFit.internalLogL(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5, self.b6, self.b7)
+        return 0.5 * temp / (1 + np.abs(temp)) + 0.5
+    
+    def xOverAbsFC(self, x):
+        temp = bestFit.internalLogS(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5)
+        return (0.5 - self.b7) * temp / (1 + np.abs(temp)) + 0.5 - self.b7 + self.b6
+        
+    testFuncs = [ erf, erfFC, hyperbTan, hyperbTanFC, GudFunc, GudFuncFC, xOverX2, xOverX2FC, xOverAbs, xOverAbsFC ]     # list of functions to facilitate their calls by numbers
+    
+    testFuncsNames = ['Erf-derived function',
+                      'Erf-derived function with floor and ceiling',
+                      'Logistic-derived function',
+                      'Logistic-derived function with floor and ceiling',
+                      'Gudermannian-derived function',
+                      'Gudermannian-derived function with floor and ceiling',
+                      'Algebraic function derived from x over sqrt(1 + x^2)',
+                      'Algebraic function derived from x over sqrt(1 + x^2) with floor and ceiling',
+                      'Algebraic function derived from x over (1 + abs(x))',
+                      'Algebraic function derived from x over (1 + abs(x)) with floor and ceiling']
+        
+    testFuncsReports = [
+                        '\n\n\tPython\n\tscipy.special.erf(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) )) * 0.5 + 0.5\n\n\t' +
+                        'Microsoft Excel\n\tERF(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ))/2 + 0.5\n\n\t' +
+                        'WolframAlpha\n\tplot | erf(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ))/2 + 0.5 | x = 0 to 100\n\n',
+                        '\n\n\tPython\n\tscipy.special.erf(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) )) * (0.5 - {7:e}) + 0.5 - {7:e} + {6:e}\n\n\t' +
+                        'Microsoft Excel\n\tERF(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) )) * (0.5 - {7:e}) + 0.5 - {7:e} + {6:e}\n\n\t' +
+                        'WolframAlpha\n\tplot | erf(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 )) * (0.5 - {7:e}) + 0.5 - {7:e} + {6:e} | x = 0 to 100\n\n',
+                        '\n\n\tPython\n\tmath.tanh(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ))/2 + 0.5\n\n\t' +
+                        'Microsoft Excel\n\tTANH(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ))/2 + 0.5\n\n\t' +
+                        'WolframAlpha\n\tplot | tanh(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ))/2 + 0.5 | x = 0 to 100\n\n',
+                        '\n\n\tPython\n\tmath.tanh(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) )) * (0.5 - {7:e}) + 0.5 - {7:e} + {6:e}\n\n\t' +
+                        'Microsoft Excel\n\tTANH(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) )) * (0.5 - {7:e}) + 0.5 - {7:e} + {6:e}\n\n\t' +
+                        'WolframAlpha\n\tplot | tanh(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 )) * (0.5 - {7:e}) + 0.5 - {7:e} + {6:e} | x = 0 to 100\n\n',
+                        '\n\n\tPython\n\t2.0 * math.atan(math.tanh(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) )))/math.pi + 0.5\n\n\t' +
+                        'Microsoft Excel\n\t2.0 * ATAN(TANH(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) )))/ PI() + 0.5\n\n\t' +
+                        'WolframAlpha\n\tplot | 2.0 * atan(tanh(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 )))/pi + 0.5 | x = 0 to 100\n\n\n',
+                        '\n\n\tPython\n\t4.0 * (0.5 - {7:e}) * math.atan(math.tanh(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) )))/math.pi + 0.5 - {7:e} + {6:e}\n\n\t' +
+                        'Microsoft Excel\n\t4.0 * (0.5 - {7:e}) * ATAN(TANH(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) )))/ PI() + 0.5 - {7:e} + {6:e}\n\n\t' +
+                        'WolframAlpha\n\tplot | 4.0 * (0.5 - {7:e}) * atan(tanh(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 )))/pi + 0.5 - {7:e} + {6:e} | x = 0 to 100\n\n\n',
+                        '\n\n\tPython\n\t0.5 * (math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ) )/((1 + (math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ))**2)**0.5) + 0.5\n\n\t' +
+                        'Microsoft Excel\n\t0.5 * (LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ) )/((1 + (LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ))^2)^0.5) + 0.5\n\n\t' +
+                        'WolframAlpha\n\tplot | 0.5 * (log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ) )/((1 + (log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ))^2)^0.5) + 0.5 | x = 0 to 100\n\n',
+                        '\n\n\tPython\n\t(0.5 - {7:e}) * (math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ) )/((1 + (math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) ))**2)**0.5) + 0.5 - {7:e} + {6:e}\n\n\t' +
+                        'Microsoft Excel\n\t(0.5 - {7:e}) * (LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ) )/((1 + (LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) ))^2)^0.5) + 0.5 - {7:e} + {6:e}\n\n\t' +
+                        'WolframAlpha\n\tplot | (0.5 - {7:e}) * (log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ) )/((1 + (log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 ))^2)^0.5) + 0.5 - {7:e} + {6:e} | x = 0 to 100\n\n',
+                        '\n\n\tPython\n\t0.5 * (math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ) )/(1 + abs(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ))) + 0.5\n\n\t' +
+                        'Microsoft Excel\n\t0.5 * (LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ) )/(1 + ABS(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ))) + 0.5\n\n\t' +
+                        'WolframAlpha\n\tplot | 0.5 * log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7)/(1 + abs(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ))) + 0.5 | x = 0 to 100\n\n',
+                        '\n\n\tPython\n\t(0.5 - {7:e}) * (math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ) )/(1 + abs(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) ))) + 0.5 - {7:e} + {6:e}\n\n\t' +
+                        'Microsoft Excel\n\t(0.5 - {7:e}) * (LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ) )/(1 + ABS(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) ))) + 0.5 - {7:e} + {6:e}\n\n\t' +
+                        'WolframAlpha\n\tplot |  (0.5 - {7:e}) * log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7)/(1 + abs(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 ))) + 0.5 - {7:e} + {6:e} | x = 0 to 100\n\n' ]
+                        
+    def function(self, x):
+        return self.testFuncs[self.best](self, x)
+                        
+    def __init__(self, parameters: np.ndarray, functionNumber: int):
+        self.b0 = parameters[0]
+        self.b1 = parameters[1]
+        self.b2 = parameters[2]
+        self.b3 = parameters[3]
+        self.b4 = parameters[4]
+        self.b5 = parameters[5]
+        self.b6 = parameters[6]
+        self.b7 = parameters[7]
+        self.ml = parameters[8]
+        self.best = functionNumber
+        self.bestName = bestFit.testFuncsNames[functionNumber]
+        self.outputText = bestFit.testFuncsReports[functionNumber]
+
+
+def fitFunctionWrapper(df: pd.DataFrame) -> Tuple[bestFit, bestFit]:
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError('function fitFunctionWrapper accepts only pandas DataFrames')
+    if df.shape[1] != 2:
+        raise ValueError('function fitFunctionWrapper accepts pandas DataFrames with only two columns: age and outcome')
+    df.columns = ['age', 'outcome']
+    if 'float' not in df['age'].dtype.__str__() and 'int' not in df['age'].dtype.__str__():
+        raise TypeError('the 1st column in the pandas DataFrame that function fitFunctionWrapper() accepts may only contain data of the numeric types, not {}'.format(df['age'].dtype.__str__()))
+    if 'float' not in df['outcome'].dtype.__str__() and 'int' not in df['outcome'].dtype.__str__():
+        raise TypeError('the 2nd column in the pandas DataFrame that function fitFunctionWrapper() accepts may only contain data of the numeric types, not {}'.format(df['outcome'].dtype.__str__()))
+
+    # when working with these arrays from the shared C library, it is critical for them be continuous in memory
+    age = np.ascontiguousarray(df['age'], dtype=np.float64)
+    outcome = np.ascontiguousarray(df['outcome'], dtype=np.intc)
+    output = np.ascontiguousarray(np.zeros(18, dtype=np.float64))   # the array to collect fitted parameters and ML estimates from the shared C library
+    # the first 9 values are reserved for the best fitted function
+    # the second 9 values are reserved for the second best fitted function
+    # among those 9, the first 8 are for the fitted coefficients and the 9th is for the (logarithmic) ML point estimate
+    res = 0     # the variable to collect the number of the best fitted function from the C interface function
+    secondRes = np.zeros(1, dtype=np.intc)     # the variable to pass by reference to the C interface function to collect the number of the second best fitted function if necessary
+    clib = cdll.LoadLibrary(abspath('libdeathcurve.so'))      # loading the compiled binary shared C library, which should be located in the same directory as this Python script; absolute path is more important for Linux — not necessary for MacOS
+    f = clib.fitFunction       # assigning the C interface function to this Python variable "f"
+    f.arguments = [ c_void_p, c_void_p, c_int, c_void_p, c_void_p]         # declaring the data types for C function arguments
+    f.restype = c_int      # declaring the data types for C function return value
+    res = f(c_void_p(age.ctypes.data), c_void_p(outcome.ctypes.data), age.size, c_void_p(output.ctypes.data), c_void_p(secondRes.ctypes.data))   # calling the C interface function
+    return bestFit(output[:9], res), bestFit(output[9:], int(secondRes))
+
+
+def reportModel(models: Tuple[bestFit, bestFit]) -> None:
+    text_output = '\nBest fit is:' + models[0].output()
+    if 'Gudermannian' in models[0].bestName:
+        text_output += '\nSecond best fit is:' + models[1].output()
+
+    print(text_output)
+
+    #Saving the report text file in the same directory
+    with open('report.txt', 'w') as f:
+        f.write(text_output)
+
+
+def plotModel(models: Tuple[bestFit, bestFit]) -> None:
+    # Plotting the graph
+    x = np.arange(0.01, 200.0, 0.01)
+    y1 = np.array([100.0 * models[0].function(i) for i in x])
+
+    if 'Gudermannian' in models[0].bestName:
+        y2 = np.array([100.0 * models[1].function(i) for i in x])
+    
+        fig, subpl = plt.subplots( 1, 2, figsize=(12,6))
+        fig.suptitle('Age-adjusted COVID-19 mortality', fontsize=16)
+        fig.set_figheight(6)
+        fig.set_figwidth(12)
+        subpl[0].plot(x, y1)
+        subpl[0].set_xlim(0.0, 100.0)
+        subpl[0].set_ylim(0.0, max(100.0 * models[0].function(100.0), 100.0 * models[1].function(100.0) ) )
+        subpl[0].set_xlabel('Age (years)')
+        subpl[0].set_ylabel('Risk of death (%)')
+        subpl[0].set_title(models[0].bestName)
+        subpl[0].grid()
+    
+        subpl[1].plot(x, y2)
+        subpl[1].set_xlim(0.0, 100.0)
+        subpl[1].set_ylim(0.0, max(100.0 * models[0].function(100.0), 100.0 * models[1].function(100.0) ) )
+        subpl[1].set_xlabel('Age (years)')
+        subpl[1].set_title(models[1].bestName)
+        subpl[1].grid()
+    else:
+        fig, subpl = plt.subplots( 1, 1, figsize=(6,6))
+        fig.suptitle('Age-adjusted COVID-19 mortality', fontsize=16)
+        fig.set_figheight(6)
+        fig.set_figwidth(6)
+        subpl.plot(x, y1)
+        subpl.set_xlim(0.0, 100.0)
+        subpl.set_ylim(0.0, 100.0 * models[0].function(100.0))
+        subpl.set_xlabel('Age (years)')
+        subpl.set_ylabel('Risk of death (%)')
+        subpl.set_title(models[0].bestName)
+        subpl.grid()
+
+    #Saving the graph image file in the same directory
+    fig.savefig("result.png")
+    plt.show()
