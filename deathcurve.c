@@ -1,5 +1,5 @@
 /*
-This code and the code of the affiliated Python scripts may help
+This C code and the code of the affiliated Python scripts may help
 you fit analytically expressed functions to the COVID-19 mortality
 data to model age-adjusted mortality risk using maximum likelihood
 point estimates.
