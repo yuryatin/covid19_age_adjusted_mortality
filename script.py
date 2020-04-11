@@ -1,32 +1,37 @@
 '''
-This code and the code of the affiliated Python wrapper module and
-shared C library may help you fit an analytically expressed function
-to the COVID-19 mortality data to model age-adjusted mortality risk
-using maximum likelihood point estimates.
+This code, the code of the affiliated Python script and shared C
+library may help you fit analytically expressed functions to the
+COVID-19 mortality data to model age-adjusted mortality risk using
+maximum likelihood point estimates.
 
-This software was desinged in two parts: a Python wrapper script to
-help more easily import and transform the input tabular data and
-finally plot the fitted curves, and a shared C library to dramatically
-speed up the calculation.
+This software was desinged in two parts: a shared C library to
+dramatically speed up the calculation and a Python wrapper script
+to feed the input data into the affiliated shared C library and
+finally plot the fitted curves. A sample Python script.py file,
+which helps more easily import and transform the input tabular data
+and imports and communicates with the Python wrapper module, is also
+attached.
 
-The shared C library provides the opportunity to test arbitraty
+The shared C library provides the opportunity to test arbitrary
 functions on condition that, in the domain between 0 and 120+, they
-return natural logarithms of values between 0.0 and 1.0 - otherwise
-in this scenario, it will make no sense.
+return values between 0.0 and 1.0 - otherwise, in this scenario, it
+will make no sense.
 
-The C library interface fitFunction() function accepts three arrays
-and two other parameters:
-- array of subjects' ages (of the data type 'double' to accomodate
-    data that specify full dates of birth instead of years of birth)
-- array of subjects' outcomes, where '1' is death and '0' is a more
-positive outcome (of the data type 'int')
-- the length of those arrays (of the data type 'int')
-- array of 16 double-precision floats to accomodate the calculated
-    parameters the interface function returns
-- a pointer to an 'int' variable to return the number of the second
-    best fit function, if necessary
-So the Python script can be modified to supply case-by-case data I
-don't yet have access to.
+The Python wrapper interface function "fitFunctionWrapper" accepts
+a two-column pandas DataFrame with:
+- the first column 'age' of the numpy numerical data type, e.g.,
+  numpy.float64 or numpy.intc (the float datatype allows to accomodate
+  data that specify full dates of birth instead of years of birth),
+- the second column 'outcome' of the numpy numerical data type, e.g.,
+  numpy.intc, where non-zero (e.g., 1) means death and zero means a
+  more positive outcome.
+
+It return a tuple of two objects of the class "bestFit" defined in the
+same wrapper module. The first object contains the calculated
+parameters and the number of the best fitted function.
+
+The attached script.py sample can be modified to supply case-by-case
+data I don't yet have access to or have failed to find.
 
 Copyright (C) 2020  Alexander Yuryatin
 
@@ -52,7 +57,7 @@ import deathcurve
 
 # the function below is designed to import the case-by-case table from URL https://www.kaggle.com/kimjihoo/coronavirusdataset#PatientInfo.csv
 # to preprocess other data sources, it should be modified
-def ingestData(dataFile):
+def ingestData(dataFile: str) -> pd.DataFrame:
     df = pd.read_csv(dataFile)[['birth_year','symptom_onset_date','confirmed_date','state','released_date','deceased_date']]
     df[['symptom_onset_date']] = pd.to_datetime(df['symptom_onset_date'], errors='coerce')
     df[['confirmed_date']] = pd.to_datetime(df['confirmed_date'], errors='coerce')
