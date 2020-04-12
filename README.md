@@ -37,6 +37,8 @@ The attached libdeathcurve.so shared library binary file in the root folder was 
 ## Compilation
 If you work on MacOS or Linux (tested on Ubuntu only), you may download script.py, deathcurve.py, deathcurve.c, and Makefile into the same directory, then open the Terminal window, proceed to that directory with 'cd' commands, and, if you already have the clang compiler installed, you may want to enter the command 'make' and press 'Enter'. This will compile deathcurve.c into the shared library libdeathcurve.so. If you don't have the clang compiler installed, you may want to install it or, alternatively, change clang to whatever compiler you wish (e.g., gcc) in Makefile before launching 'make'. After compilation, you may want to fetch the suggested test csv file and launch script.py in the terminal window.
 
+If you experience any difficulty doing that, those steps are shown in the demo video at https://youtu.be/HKwlgA16MF4
+
 ## Output formulas formats
 The Python script, when finishes, should both plot the best fitted curve and save into the same directory the report file that contains the formula for the best fitted function in the formats for:
 * Python
