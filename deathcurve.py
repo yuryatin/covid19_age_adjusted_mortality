@@ -69,8 +69,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import numpy as np
 import pandas as pd
-import scipy.special as ss
-from ctypes import *
+from scipy.special import erf
+from ctypes import cdll, c_void_p, c_int
 import matplotlib.pyplot as plt
 from os.path import abspath
 from typing import Tuple
@@ -88,10 +88,10 @@ class bestFit():
         return np.log(np.power(10.0, b0) + np.power(10.0, b1) * x + np.power(10.0, b2) * (x ** 2) + np.power(10.0, b3) * (x ** 3) + np.power(10.0, b4) * (x ** 4) + np.power(10.0, b5) * (x ** 5))
 
     def erf(self, x):
-        return ss.erf(bestFit.internalLogL(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5, self.b6, self.b7)) * 0.5 + 0.5
+        return erf(bestFit.internalLogL(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5, self.b6, self.b7)) * 0.5 + 0.5
     
     def erfFC(self, x):
-        return ss.erf(bestFit.internalLogS(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5)) * (0.5 - self.b7) + 0.5 - self.b7 + self.b6
+        return erf(bestFit.internalLogS(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5)) * (0.5 - self.b7) + 0.5 - self.b7 + self.b6
     
     def hyperbTan(self, x):
         return np.tanh(bestFit.internalLogL(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5, self.b6, self.b7)) * 0.5 + 0.5
@@ -135,10 +135,10 @@ class bestFit():
                       'Algebraic function derived from x over (1 + abs(x)) with floor and ceiling']
         
     testFuncsReports = [
-                        '\n\n\tPython\n\tscipy.special.erf(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) )) * 0.5 + 0.5\n\n\t' +
+                        '\n\n\tPython\n\tfrom scipy.special import erf\n\terf(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) )) * 0.5 + 0.5\n\n\t' +
                         'Microsoft Excel\n\tERF(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ))/2 + 0.5\n\n\t' +
                         'WolframAlpha\n\tplot | erf(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7 ))/2 + 0.5 | x = 0 to 100\n\n',
-                        '\n\n\tPython\n\tscipy.special.erf(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) )) * (0.5 - {7:e}) + 0.5 - {7:e} + {6:e}\n\n\t' +
+                        '\n\n\tPython\n\tfrom scipy.special import erf\n\terf(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) )) * (0.5 - {7:e}) + 0.5 - {7:e} + {6:e}\n\n\t' +
                         'Microsoft Excel\n\tERF(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) )) * (0.5 - {7:e}) + 0.5 - {7:e} + {6:e}\n\n\t' +
                         'WolframAlpha\n\tplot | erf(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 )) * (0.5 - {7:e}) + 0.5 - {7:e} + {6:e} | x = 0 to 100\n\n',
                         '\n\n\tPython\n\tmath.tanh(math.log({0:e} + {1:e}*x + {2:e}*(x**2) + {3:e}*(x**3) + {4:e}*(x**4) + {5:e}*(x**5) + {6:e}*(x**6) + {7:e}*(x**7) ))/2 + 0.5\n\n\t' +
@@ -166,7 +166,7 @@ class bestFit():
                         'Microsoft Excel\n\t(0.5 - {7:e}) * (LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) + {6:e}*(A1^6) + {7:e}*(A1^7) ) )/(1 + ABS(LN({0:e} + {1:e}*A1 + {2:e}*(A1^2) + {3:e}*(A1^3) + {4:e}*(A1^4) + {5:e}*(A1^5) ))) + 0.5 - {7:e} + {6:e}\n\n\t' +
                         'WolframAlpha\n\tplot |  (0.5 - {7:e}) * log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 + {6:e} x^6 + {7:e} x^7)/(1 + abs(log({0:e} + {1:e} x + {2:e} x^2 + {3:e} x^3 + {4:e} x^4 + {5:e} x^5 ))) + 0.5 - {7:e} + {6:e} | x = 0 to 100\n\n' ]
                         
-    def function(self, x):
+    def function(self, x) -> float:
         return self.testFuncs[self.best](self, x)
                         
     def __init__(self, parameters: np.ndarray, functionNumber: int):
@@ -219,7 +219,7 @@ def reportModel(models: Tuple[bestFit, bestFit]) -> None:
 
     print(text_output)
 
-    #Saving the report text file in the same directory
+    # Saving the report text file in the same directory
     with open('report.txt', 'w') as f:
         f.write(text_output)
 
@@ -263,6 +263,6 @@ def plotModel(models: Tuple[bestFit, bestFit]) -> None:
         subpl.set_title(models[0].bestName)
         subpl.grid()
 
-    #Saving the graph image file in the same directory
+    # Saving the graph image file in the same directory
     fig.savefig("result.png")
     plt.show()
