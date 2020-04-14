@@ -99,7 +99,7 @@ static double hyperbTanFC(double x, int outcome, double b0, double b1, double b2
 #define LONG_FUNC_NUMBER 4
 static char funcName4[] = "Gudermannian-derived function";
 static double GudFunc(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double result = atan(tanh(internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7))) * M_1_PI * 4.0 * (0.5 - b7) + 0.5 - b7 + b6;
+    double result = atan(tanh(internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7))) * M_1_PI * 2.0 + 0.5;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
 }
 
