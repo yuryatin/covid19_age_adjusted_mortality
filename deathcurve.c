@@ -17,18 +17,29 @@ functions on condition that, in the domain between 0 and 120+, they
 return values between 0.0 and 1.0 - otherwise, in this scenario, it
 will make no sense.
 
-The Python wrapper interface function "fitFunctionWrapper" accepts
-a two-column pandas DataFrame with:
-- the first column 'age' of the numpy numerical data type, e.g.,
-  numpy.float64 or numpy.intc (the float datatype allows to accomodate
-  data that specify full dates of birth instead of years of birth),
-- the second column 'outcome' of the numpy numerical data type, e.g.,
-  numpy.intc, where non-zero (e.g., 1) means death and zero means a
-  more positive outcome.
+The Python wrapper interface function fitFunctionWrapper() accepts
+up to four arguments:
+- a two-column pandas DataFrame (the only mandatory argument) with:
+  - the first column 'age' of the numpy numerical data type, e.g.,
+    numpy.float64 or numpy.intc (the float datatype allows to
+    accomodate data that specify full dates of birth instead of years
+    of birth)
+  - the second column 'outcome' of the numpy numerical data type, e.g.,
+    numpy.intc, where non-zero (e.g., 1) means death and zero means a
+    more positive outcome
+- a string with signs for the up to eight coefficients (without
+  specifying, only positive coefficients are going to be fitted, as in
+  the package versions below 2.0), e.g., "++++++++", "-", "-+-+"
+- a boolean argument specifying if you want to fit the coefficients
+  with the signs starting from those specified in the previous
+  parameter all the way to "--------" (True) or the signs specified in
+  the previous parameter only (False). The defaule is 'False'
+- a tuple of integers with the numbers of functions you want to fit
+  (starting at zero): e.g., (0,), (0, 3), (5, 2), (0, 1, 4, 5, 6, 7,
+  8, 9)
 
-It return a tuple of two objects of the class "bestFit" defined in the
-same wrapper module. The first object contains the calculated
-parameters and the number of the best fitted function.
+It return an object of the class bestFit defined in the same wrapper
+module.
 
 The attached script.py sample can be modified to supply case-by-case
 data I don't yet have access to or have failed to find.
@@ -411,6 +422,8 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
     
     /* the output below help compare the ten functions in terms of their fit to the data */
     for (int iFunc = START_FUNCTION - 1; iFunc < STOP_FUNCTION; ++iFunc) {
+        signs = finalSigns[iFunc];
+        convertSigns();
         if (!functionsToTest[iFunc]) continue;
         printf("\nFunction %i:\t\t%s\n\tML estimate:\t%.16f\n\tParameters:\t%.6e %.6e %.6e %.6e %.6e %.6e %.6e %.6e\n\tSigns:\t\tx%02x\t%s\n",
                iFunc,
