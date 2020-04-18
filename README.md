@@ -17,7 +17,7 @@ The Python wrapper interface function *fitFunctionWrapper()* accepts up to four 
 - a boolean argument specifying if you want to fit the coefficients with the signs starting from those specified in the previous parameter all the way to "--------" (*True*) or the signs specified in the previous parameter only (*False*). The defaule is 'False'
 - a tuple of integers with the numbers of functions you want to fit (starting at zero): e.g., (0,), (0, 3), (5, 2), (0, 1, 4, 5, 6, 7, 8, 9)
 
-It return an object of the class *bestFit* defined in the same wrapper module.
+It returns an object of the class *bestFit* defined in the same wrapper module.
 
 The attached *script.py* sample can be modified to supply case-by-case data I don't yet have access to or have failed to find.
 
