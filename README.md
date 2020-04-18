@@ -19,7 +19,7 @@ The Python wrapper interface function *fitFunctionWrapper()* accepts up to four 
 
 It return an object of the class *bestFit* defined in the same wrapper module.
 
-The attached script.py sample can be modified to supply case-by-case data I don't yet have access to or have failed to find.
+The attached *script.py* sample can be modified to supply case-by-case data I don't yet have access to or have failed to find.
 
 Launching the fitting of all functions and for all coeficients' signs will occupy your laptop, workstation or server for many hours (if not days). In order to stop the execution and report the best fitted function so far, you may save the file with the name *stop.txt* empty or with any content in the same directory. The C code checks the presence of this file in the working directory at each round and properly finishes if that file is found. The *stop_script.py* file serves that purpose. Alternatively you may enter 'touch stop.txt' command in the terminal while in the working directory to create that file. Please do not forget to delete it afterward.
 
@@ -35,13 +35,13 @@ Each of the five main sigmoid functions is supplemented with a version elevated 
     It needs the following non-standard modules and packages: numpy, pandas, scipy, and matplotlib.
 
 ## Environment to launch the Python script
-script.py is best launched in the MacOS or Linux terminal window. Otherwise, your Python shell or IDE may not print the progress messages from the imported shared C library.
+*script.py* is best launched in the MacOS or Linux terminal window. Otherwise, your Python shell or IDE may not print the progress messages from the imported shared C library.
 
 ## Attached binary shared library
 The attached *libdeathcurve.so* shared library binary file in the root folder was compiled from the attached *deathcurve.c* file for MacOS Catalina x86-64 using the attached *Makefile*. A shared library binary file that was compiled for Ubuntu can be found in a separate folder.
 
 ## Compilation
-If you work on MacOS or Linux (tested on Ubuntu only), you may download *script.py*, *deathcurve.py*, *deathcurve.c*, and *Makefile* into the same directory, then open the Terminal window, proceed to that directory with 'cd' commands, and, if you already have the clang compiler installed, you may want to enter the command 'make' and press 'Enter'. This will compile *deathcurve.c* into the shared library *libdeathcurve.so*. If you don't have the clang compiler installed, you may want to install it or, alternatively, change clang to whatever compiler you wish (e.g., gcc) in *Makefile* before launching 'make'. After compilation, you may want to fetch the suggested test *csv* file and launch *script.py* in the terminal window.
+If you work on MacOS or Linux (tested on Ubuntu only), you may download *script.py*, *deathcurve.py*, *deathcurve.c*, and *Makefile* into the same directory, then open the Terminal window, proceed to that directory with 'cd' commands, and, if you already have the clang compiler installed, you may want to enter the command 'make' and press 'Enter'. This will compile *deathcurve.c* into the shared library *libdeathcurve.so*. If you don't have the clang compiler installed, you may want to install it or, alternatively, change clang to whatever compiler you wish (e.g., gcc) in *Makefile* before launching 'make'. After compilation, you may want to fetch the suggested test *csv* file (or put your dataset and rewrite *ingestData()* function in *script.py*) and launch *script.py* in the terminal window.
 
 If you experience any difficulty doing that, those steps are shown in the demo video at https://youtu.be/HKwlgA16MF4
 
@@ -56,5 +56,5 @@ The Python script, when finishes, should both plot the best fitted curve and sav
 ## What's new in the version 2
 - The most radical change is that the package now fits the functions with arbitrary signs of coefficients. No need in hard coding those signs anymore. However, exhaustive fitting all of them will require significantly longer computation time. In the case of using this package for business application or adequately funded academic research, I highly recommend launching the calculation in the clould on a virtual machine with the largest number of CPU cores possible.
 - The terms in the equation minimized virtualy to zero during the fitting used to be left in the formula. Now they are removed automatically and the best fitted equations are reported without them.
-- The *fitFunctionWrapper()* function of the deathcurve.py module now returns one object of the *bestFit* class, not a tuple of two objects.
+- The *fitFunctionWrapper()* function of the *deathcurve.py* module now returns one object of the *bestFit* class, not a tuple of two objects.
 - *reportModel()* and *plotModel()* turned into methods of the *bestFit* class from standalone functions.
