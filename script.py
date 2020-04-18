@@ -66,7 +66,7 @@ def ingestData(dataFile: str) -> pd.DataFrame:
     latestDate = df[['symptom_onset_date','confirmed_date','deceased_date','released_date']].max(skipna=True).max()
     df['earliest_date'] = df[['symptom_onset_date','confirmed_date']].min(skipna=True, axis=1)
     df['death_on_date'] = df['deceased_date'] - df['earliest_date']
-    df = df[(latestDate - df.earliest_date > df['death_on_date'].dropna().quantile(.98)) & (df.birth_year.isna()==False)]    # it was an arbitrary decision to remove all cases that are younger than 98%-percentile of days-to-death from first symptoms or diagnosis confirmation whichever is earlier. You can adjust it with a more rigorous rationale. If all cases are left, (especially on the rising pandemics) the mortality is expected to be underestimated
+    df = df[(latestDate - df.earliest_date > df['death_on_date'].dropna().quantile(.95)) & (df.birth_year.isna()==False)]    # it was an arbitrary decision to remove all cases that are younger than 95%-percentile of days-to-death from first symptoms or diagnosis confirmation whichever is earlier. You can adjust it with a more rigorous rationale. If all cases are left, (especially on the rising pandemics) the mortality is expected to be underestimated
     df['age'] = 2020 - df['birth_year']       # in case the dataset has full birth dates instead of birth years, the data type for this variable was left float64/double both in numpy/pandas and the shared C library
     df['outcome'] = np.where(df.state == 'deceased', 1, 0)
     df['age'] = np.where(df.age == 0.0, 1e-8, df.age)
@@ -76,9 +76,9 @@ def ingestData(dataFile: str) -> pd.DataFrame:
 def main():
     # the function below is designed to import the case-by-case table from URL https://www.kaggle.com/kimjihoo/coronavirusdataset#PatientInfo.csv
     df = ingestData('PatientInfo.csv')
-    bestFunction = deathcurve.fitFunctionWrapper(df)
-    deathcurve.reportModel(bestFunction)
-    deathcurve.plotModel(bestFunction)
+    bestFunction = deathcurve.fitFunctionWrapper(df, '-', False, functions = (0,))   # when passing custom 'functions' parameter consisting of one integer, please remember to add a comma after it to count for a tuple: (1,) instead of (1)
+    bestFunction.reportModel()
+    bestFunction.plotModel()
     
     
 if __name__ == '__main__':
