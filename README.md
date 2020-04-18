@@ -14,7 +14,7 @@ The Python wrapper interface function *fitFunctionWrapper()* accepts up to four 
   - the first column 'age' of the numpy numerical data type, e.g., *numpy.float64* or *numpy.intc* (the float datatype allows to accomodate data that specify full dates of birth instead of years of birth)
   - the second column 'outcome' of the numpy numerical data type, e.g., *numpy.intc*, where non-zero (e.g., 1) means death and zero means a more positive outcome
 - a string with signs for the up to eight coefficients (without specifying, only positive coefficients are going to be fitted, as in the package versions below 2.0), e.g., "++++++++", "-", "-+-+"
-- a boolean argument specifying if you want to fit the coefficients with the signs starting from those specified in the previous parameter all the way to "--------" (*True*) or only the signs specified in the previous parameter (*False*). The defaule is 'False'
+- a boolean argument specifying if you want to fit the coefficients with the signs starting from those specified in the previous parameter all the way to "--------" (*True*) or the signs specified in the previous parameter only (*False*). The defaule is 'False'
 - a tuple of integers with the numbers of functions you want to fit (starting at zero): e.g., (0,), (0, 3), (5, 2), (0, 1, 4, 5, 6, 7, 8, 9)
 
 It return an object of the class *bestFit* defined in the same wrapper module.
