@@ -413,7 +413,7 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
             }
             printf("\t\tML is %20.16f\n", result);
             fflush(stdout);
-            if (signs == (* sign1) + 2 || * sign2) break;
+            if (* sign2) break;
             if (iFunc % 2 && signs / (unsigned char) 0b01000000) break;
             ++signs;
         }
