@@ -45,7 +45,7 @@ If you work on MacOS or Linux (tested on Ubuntu only), you may download *script.
 
 If you experience any difficulty doing that, those steps are shown in the demo video at https://youtu.be/HKwlgA16MF4
 
-It demonstrates the one of the previous versions 1.+ of this package.
+It demonstrates one of the previous versions 1.+ of this package.
 
 ## Output formulas formats
 The Python script, when finishes, should both plot the best fitted curve and save into the same directory the report file that contains the formula for the best fitted function in the formats for:
