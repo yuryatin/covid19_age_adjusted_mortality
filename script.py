@@ -32,8 +32,8 @@ up to four arguments:
   the package versions below 2.0), e.g., "++++++++", "-", "-+-+"
 - a boolean argument specifying if you want to fit the coefficients
   with the signs starting from those specified in the previous
-  parameter all the way to "--------" (True) or the signs specified in
-  the previous parameter only (False). The defaule is 'False'
+  parameter all the way to "--------" (False) or the signs specified in
+  the previous parameter only (True). The defaule is 'False'
 - a tuple of integers with the numbers of functions you want to fit
   (starting at zero): e.g., (0,), (0, 3), (5, 2), (0, 1, 4, 5, 6, 7,
   8, 9)
@@ -87,7 +87,7 @@ def ingestData(dataFile: str) -> pd.DataFrame:
 def main():
     # the function below is designed to import the case-by-case table from URL https://www.kaggle.com/kimjihoo/coronavirusdataset#PatientInfo.csv
     df = ingestData('PatientInfo.csv')
-    bestFunction = deathcurve.fitFunctionWrapper(df, '-', False, functions = (0,))   # when passing custom 'functions' parameter consisting of one integer, please remember to add a comma after it to count for a tuple: (1,) instead of (1)
+    bestFunction = deathcurve.fitFunctionWrapper(df, '++-', True, functions = (0,))   # when passing custom 'functions' parameter consisting of one integer, please remember to add a comma after it to count for a tuple: (1,) instead of (1)
     bestFunction.reportModel()
     bestFunction.plotModel()
     
