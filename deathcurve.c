@@ -18,7 +18,7 @@ return values between 0.0 and 1.0 - otherwise, in this scenario, it
 will make no sense.
 
 The Python wrapper interface function fitFunctionWrapper() accepts
-up to four arguments:
+up to five arguments:
 - a two-column pandas DataFrame (the only mandatory argument) with:
   - the first column 'age' of the numpy numerical data type, e.g.,
     numpy.float64 or numpy.intc (the float datatype allows to
@@ -37,6 +37,8 @@ up to four arguments:
 - a tuple of integers with the numbers of functions you want to fit
   (starting at zero): e.g., (0,), (0, 3), (5, 2), (0, 1, 4, 5, 6, 7,
   8, 9)
+- an integer with the order of the internal polymonial, which can be in
+  the range from 2 to 7
 
 It return an object of the class bestFit defined in the same wrapper
 module.
@@ -79,9 +81,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define TOTAL_NUMBER_OF_FUNCTIONS 10
 
 /* these variables were made global to make them accessible (read-only) to all threads */
-char signString[9];
-unsigned char signs;
-static int func_g, * outcome_g, length_g, precision_g;
+static char signString[9];
+static unsigned char signs;
+static int func_g, * outcome_g, length_g, precision_g, skip_g, start_g, order_g;
 static double b0_g, b1_g, b2_g, b3_g, b4_g, b5_g, b6_g, b7_g, * age_g, * result_g;
 
 /* The ten fitted functions */
@@ -104,54 +106,69 @@ static double erfLogFC(double x, int outcome, double b0, double b1, double b2, d
 
 static char funcName2[] = "Logistic-derived function";
 static double hyperbTan(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double result = tanh(internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7)) * 0.5 + 0.5;
+    double result = internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7);
+    if (result <= 0.0) return -DBL_MAX;
+    result = tanh(log(result)) * 0.5 + 0.5;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
 }
 
 static char funcName3[] = "Logistic-derived function with floor and ceiling";
 static double hyperbTanFC(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double result = tanh(internalLogS(x, signs, b0, b1, b2, b3, b4, b5)) * (0.5 - b7) + 0.5 - b7 + b6;
+    double result = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
+    if (result <= 0.0) return -DBL_MAX;
+    result = tanh(log(result)) * (0.5 - b7) + 0.5 - b7 + b6;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
 }
 
-#define LONG_FUNC_NUMBER 4
 static char funcName4[] = "Gudermannian-derived function";
 static double GudFunc(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double result = atan(tanh(internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7))) * M_1_PI * 2.0 + 0.5;
+    double result = internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7);
+    if (result <= 0.0) return -DBL_MAX;
+    result = atan(tanh(log(result))) * M_1_PI * 2.0 + 0.5;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
 }
 
 static char funcName5[] = "Gudermannian-derived function with floor and ceiling";
 static double GudFuncFC(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double result = atan(tanh(internalLogS(x, signs, b0, b1, b2, b3, b4, b5))) * M_1_PI * 4.0 * (0.5 - b7) + 0.5 - b7 + b6;
+    double result = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
+    if (result <= 0.0) return -DBL_MAX;
+    result = atan(tanh(log(result))) * M_1_PI * 4.0 * (0.5 - b7) + 0.5 - b7 + b6;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
 }
 
 static char funcName6[] = "Algebraic function derived from x over sqrt(1 + x^2)";
 static double xOverX2(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double temp = internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7);
-    double result = temp * pow(1.0 + pow(temp, 2.0), -0.5) * 0.5 + 0.5;
+    double result = internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7);
+    if (result <= 0.0) return -DBL_MAX;
+    double temp = log(result);
+    result = temp * pow(1.0 + pow(temp, 2.0), -0.5) * 0.5 + 0.5;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
 }
 
 static char funcName7[] = "Algebraic function derived from x over sqrt(1 + x^2) with floor and ceiling";
 static double xOverX2FC(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double temp = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
-    double result = temp * pow(1.0 + pow(temp, 2.0), -0.5) * (0.5 - b7) + 0.5 - b7 + b6;
+    double result = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
+    if (result <= 0.0) return -DBL_MAX;
+    double temp = log(result);
+    result = temp * pow(1.0 + pow(temp, 2.0), -0.5) * (0.5 - b7) + 0.5 - b7 + b6;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
 }
 
 static char funcName8[] = "Algebraic function derived from x over (1 + abs(x))";
 static double xOverAbs(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double temp = internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7);
-    double result = temp / (1 +fabs(temp)) * 0.5 + 0.5;
+    double result = internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7);
+    if (result <= 0.0) return -DBL_MAX;
+    double temp = log(result);
+    result = temp / (1 +fabs(temp)) * 0.5 + 0.5;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
 }
 
 static char funcName9[] = "Algebraic function derived from x over (1 + abs(x)) with floor and ceiling";
 static double xOverAbsFC(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double temp = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
-    double result = temp / (1 +fabs(temp)) * (0.5 - b7) + 0.5 - b7 + b6;
+    double result = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
+    if (result <= 0.0) return -DBL_MAX;
+    double temp = log(result);
+    result = temp / (1 +fabs(temp)) * (0.5 - b7) + 0.5 - b7 + b6;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
 }
 
@@ -200,22 +217,22 @@ static int oneStep(int func, double * result, double * age, int * outcome, int l
     result_g = malloc(pow(3,8) * sizeof(double));
     myThreads = malloc(pow(3,8) * sizeof(pthread_t));
     int threadCount=0;
-    for (threadCount=0; threadCount < THREADS_MAX; ++threadCount)
+    for (threadCount = start_g; threadCount < THREADS_MAX; threadCount += skip_g)
         pthread_create(&myThreads[threadCount], NULL, getML, (void *) (intptr_t) threadCount);
-    for (int i = 0; i < threadCount; ++i)
+    for (int i = start_g; i < threadCount; i += skip_g)
         pthread_join(myThreads[i], NULL);
-    * result = result_g[1];
-    int position = 1;
+    * result = result_g[start_g + skip_g];
+    int position = start_g + skip_g;
     int condition = 1;
     while(condition) {
         condition = 0;
-        for (int i = 1; i < 8; ++i) {
-            if (result_g[indexConverter(i)] >= *result) {
-                * result = result_g[indexConverter(i)];
-                position = indexConverter(i);
+        for (int iOrder = order_g; iOrder <= 8; ++iOrder) {
+            if (result_g[indexConverter(iOrder)] >= *result) {
+                * result = result_g[indexConverter(iOrder)];
+                position = indexConverter(iOrder);
             }
         }
-        for (int i = 0; i < THREADS_MAX; ++i) {
+        for (int i = start_g; i < THREADS_MAX; i += skip_g) {
             if (result_g[i] > *result) {
                 * result = result_g[i];
                 position = i;
@@ -229,7 +246,10 @@ static int oneStep(int func, double * result, double * age, int * outcome, int l
 }
 
 /* the function that needs to be called from the Python (wrapper) script */
-int fitFunction(double * ages, int * the_outcomes, int length, double * output, int * secondRes, int * sign1, int * sign2, int * functionsToTest) {
+int fitFunction(double * ages, int * the_outcomes, int length, double * output, int * secondRes, int * sign1, int * sign2, int * functionsToTest, int polyn_order) {
+    order_g = 8 - polyn_order;
+    start_g = ((int) pow(3, 7 - polyn_order)) / 2;
+    skip_g = (int) pow(3, 7 - polyn_order);
     FILE * fp;   // file pointer for the stop signal
     signString[8] = '\0';
     testFunc[0] = &erfLog;
@@ -253,6 +273,8 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
     funcNames[8] = funcName8;
     funcNames[9] = funcName9;
     double finalResults[STOP_FUNCTION][9];
+    for (int i = 0; i < STOP_FUNCTION; ++i)
+        finalResults[i][8] = -1e100;
     unsigned char finalSigns[STOP_FUNCTION];
     double result = 0.0;
     double resultPrev = 0.0;
@@ -262,20 +284,20 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
     Play with them to get better fitting. */
     double b0_input_seed = -13.7895;
     double b1_input_seed = -2.5031;
-    double b2_input_seed = -4.3979;
-    double b3_input_seed = -7.7828;
-    double b4_input_seed = -18.3195;
-    double b5_input_seed = -19.7568;
-    double b6_input_seed = -26.0665;
-    double b7_input_seed = -31.0665;
+    double b2_input_seed = polyn_order > 1 ? -4.3979 : -300.0;
+    double b3_input_seed = polyn_order > 2 ? -7.7828 : -300.0;
+    double b4_input_seed = polyn_order > 3 ? -18.3195 : -300.0;
+    double b5_input_seed = polyn_order > 4 ? -19.7568 : -300.0;
+    double b6_input_seed = polyn_order > 5 ? -26.0665 : -300.0;
+    double b7_input_seed = polyn_order > 6 ? -31.0665 : -300.0;
     /* double b0_input_seed = -13.9234;
     double b1_input_seed = -2.5907;
-    double b2_input_seed = -4.4888;
-    double b3_input_seed = -18.2855;
-    double b4_input_seed = -22.5474;
-    double b5_input_seed = -78.2407;
-    double b6_input_seed = -82.5504;
-    double b7_input_seed = -87.5504; */
+    double b2_input_seed = polyn_order > 1 ? -4.4888 : -300.0;
+    double b3_input_seed = polyn_order > 2 ? -18.2855 : -300.0;
+    double b4_input_seed = polyn_order > 3 ? -22.5474 : -300.0;
+    double b5_input_seed = polyn_order > 4 ? -78.2407 : -300.0;
+    double b6_input_seed = polyn_order > 5 ? -82.5504 : -300.0;
+    double b7_input_seed = polyn_order > 6 ? -87.5504 : -300.0; */
     double b0_input, b1_input, b2_input, b3_input, b4_input, b5_input, b6_input, b7_input;
     int b0_index = 0;
     int b1_index = 0;
@@ -294,7 +316,10 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
     int resulting = 0;
     for (int iFunc = START_FUNCTION - 1; iFunc < STOP_FUNCTION; ++iFunc) {
         if (!functionsToTest[iFunc]) continue;
-        if (firstFunction) resulting = iFunc;
+        if (firstFunction) {
+            resulting = iFunc;
+            firstFunction = 0;
+        }
         signs = (unsigned char) * sign1;
         while(1) {
             convertSigns();
@@ -364,8 +389,6 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
                 }
                 if ((fp = fopen("stop.txt", "r")) != NULL) {
                     fclose(fp);
-                    remove("stop.txt");
-                    puts("I have received the signal to stop. The calculation has stoped. You will see the intermediate results.");
                     fflush(stdout);
                     break;
                 }
@@ -414,11 +437,23 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
             printf("\t\tML is %20.16f\n", result);
             fflush(stdout);
             if (* sign2) break;
-            if (iFunc % 2 && signs / (unsigned char) 0b01000000) break;
+            if (signs == (unsigned char) pow(2, polyn_order + 1) - 1) break;
             ++signs;
+            if (iFunc % 2 && (signs & (unsigned char) 0b11000000)) break;
+            if ((fp = fopen("stop.txt", "r")) != NULL) {
+                fclose(fp);
+                fflush(stdout);
+                break;
+            }
+        }
+        if ((fp = fopen("stop.txt", "r")) != NULL) {
+            fclose(fp);
+            remove("stop.txt");
+            puts("I have received the signal to stop. The calculation has stoped. You will see the intermediate results.");
+            fflush(stdout);
+            break;
         }
     }
-    //finalResults[2][8] = -150.0;    // this line can be uncommented to arbitrarily force any of the five functions with their best fitted parameters be be reported to Python script for plotting and saving their fitted formulas
     
     /* the output below help compare the ten functions in terms of their fit to the data */
     for (int iFunc = START_FUNCTION - 1; iFunc < STOP_FUNCTION; ++iFunc) {

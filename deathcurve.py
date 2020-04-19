@@ -13,7 +13,7 @@ and imports and communicates with the Python wrapper module, is also
 attached.
 
 The Python wrapper interface function fitFunctionWrapper() accepts
-up to four arguments:
+up to five arguments:
 - a two-column pandas DataFrame (the only mandatory argument) with:
   - the first column 'age' of the numpy numerical data type, e.g.,
     numpy.float64 or numpy.intc (the float datatype allows to
@@ -32,6 +32,8 @@ up to four arguments:
 - a tuple of integers with the numbers of functions you want to fit
   (starting at zero): e.g., (0,), (0, 3), (5, 2), (0, 1, 4, 5, 6, 7,
   8, 9)
+- an integer with the order of the internal polymonial, which can be in
+  the range from 2 to 7
 
 It return an object of the class bestFit defined in the same wrapper
 module.
@@ -164,14 +166,14 @@ class bestFit():
     hyperbTanFC.short = True
 
     def GudFunc(self, x):
-        temp = bestFit.internalLogL(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5, self.b6, self.b7)
+        temp = bestFit.internalLogL(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5, self.b6, self.b7) - self.b0
         if(temp) <= 0.0: temp = -np.inf
         else: temp = np.log(temp)
         return np.arctan(np.tanh(temp)) * 2.0 / np.pi + 0.5
     GudFunc.short = False
     
     def GudFuncFC(self, x):
-        temp = bestFit.internalLogS(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5)
+        temp = bestFit.internalLogS(x, self.b0, self.b1, self.b2, self.b3, self.b4, self.b5) - self.b0
         if(temp) <= 0.0: temp = -np.inf
         else: temp = np.log(temp)
         return np.arctan(np.tanh(temp)) * 4.0 * (0.5 - self.b7) / np.pi + 0.5 - self.b7 + self.b6
@@ -263,7 +265,7 @@ class bestFit():
 
     def plotModel(self) -> None:
         # Plotting the graph
-        x = np.arange(0.01, self.maxAge, 0.01)
+        x = np.arange(0.01 if self.b0 <= 0.0 else self.b0 + 0.01, self.maxAge, 0.01)
         y = np.array([100.0 * self.function(i) for i in x])
 
         fig, subpl = plt.subplots( 1, 1, figsize=(7,6))
@@ -309,7 +311,11 @@ def _strToSigns(signs: str) -> int:
     return result
 
 
-def fitFunctionWrapper(df: pd.DataFrame, signs: str = None, oneSignSet: bool = False, functions: Tuple = tuple(range(len(bestFit.testFuncs)))) -> bestFit:
+def fitFunctionWrapper(df: pd.DataFrame, signs: str = None, oneSignSet: bool = False, functions: Tuple = tuple(range(len(bestFit.testFuncs))), polynomial_order: int = 5) -> bestFit:
+    if not isinstance(polynomial_order, int):
+        raise TypeError('argument \'polynomial_order\' of the function fitFunctionWrapper accepts only integers')
+    if polynomial_order > 7 or polynomial_order < 2:
+        raise ValueError('argument \'polynomial_order\' of the function fitFunctionWrapper accepts only integers from 2 to 7')
     if not isinstance(df, pd.DataFrame):
         raise TypeError('function fitFunctionWrapper accepts only pandas DataFrames as a first parameter')
     if df.shape[1] != 2:
@@ -357,7 +363,7 @@ def fitFunctionWrapper(df: pd.DataFrame, signs: str = None, oneSignSet: bool = F
         if i in functions: functionsToFit[i] = 1
     clib = cdll.LoadLibrary(abspath('libdeathcurve.so'))      # loading the compiled binary shared C library, which should be located in the same directory as this Python script; absolute path is more important for Linux — not necessary for MacOS
     f = clib.fitFunction       # assigning the C interface function to this Python variable "f"
-    f.arguments = [ c_void_p, c_void_p, c_int, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p ]         # declaring the data types for C function arguments
+    f.arguments = [ c_void_p, c_void_p, c_int, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_int ]         # declaring the data types for C function arguments
     f.restype = c_int      # declaring the data types for C function return value
-    res = f(c_void_p(age.ctypes.data), c_void_p(outcome.ctypes.data), age.size, c_void_p(output.ctypes.data), c_void_p(secondRes.ctypes.data), c_void_p(sign1.ctypes.data), c_void_p(sign2.ctypes.data), c_void_p(functionsToFit.ctypes.data))   # calling the C interface function
+    res = f(c_void_p(age.ctypes.data), c_void_p(outcome.ctypes.data), age.size, c_void_p(output.ctypes.data), c_void_p(secondRes.ctypes.data), c_void_p(sign1.ctypes.data), c_void_p(sign2.ctypes.data), c_void_p(functionsToFit.ctypes.data), polynomial_order)   # calling the C interface function
     return bestFit(output[:9], res, int(sign1), float(df['age'].max()))

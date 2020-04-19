@@ -18,7 +18,7 @@ return values between 0.0 and 1.0 - otherwise, in this scenario, it
 will make no sense.
 
 The Python wrapper interface function fitFunctionWrapper() accepts
-up to four arguments:
+up to five arguments:
 - a two-column pandas DataFrame (the only mandatory argument) with:
   - the first column 'age' of the numpy numerical data type, e.g.,
     numpy.float64 or numpy.intc (the float datatype allows to
@@ -37,6 +37,8 @@ up to four arguments:
 - a tuple of integers with the numbers of functions you want to fit
   (starting at zero): e.g., (0,), (0, 3), (5, 2), (0, 1, 4, 5, 6, 7,
   8, 9)
+- an integer with the order of the internal polymonial, which can be in
+  the range from 2 to 7
 
 It return an object of the class bestFit defined in the same wrapper
 module.
@@ -87,7 +89,8 @@ def ingestData(dataFile: str) -> pd.DataFrame:
 def main():
     # the function below is designed to import the case-by-case table from URL https://www.kaggle.com/kimjihoo/coronavirusdataset#PatientInfo.csv
     df = ingestData('PatientInfo.csv')
-    bestFunction = deathcurve.fitFunctionWrapper(df, '++-', True, functions = (0,))   # when passing custom 'functions' parameter consisting of one integer, please remember to add a comma after it to count for a tuple: (1,) instead of (1)
+    print('{} cases were selected with {} deaths\n'.format(df.shape[0], df['outcome'].sum()))
+    bestFunction = deathcurve.fitFunctionWrapper(df, signs = '++++++++', oneSignSet = False, functions = (0,2,4,6,8), polynomial_order = 5)   # when passing custom 'functions' parameter consisting of one integer, please remember to add a comma after it to count for a tuple: (1,) instead of (1)
     bestFunction.reportModel()
     bestFunction.plotModel()
     
