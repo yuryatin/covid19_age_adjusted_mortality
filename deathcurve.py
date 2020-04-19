@@ -274,7 +274,7 @@ class bestFit():
         fig.set_figwidth(7)
         subpl.plot(x, y)
         subpl.set_xlim(0.0, self.maxAge)
-        subpl.set_ylim(0.0, 100.0 * self.function(self.maxAge))
+        subpl.set_ylim(0.0, y.max())
         subpl.set_ylabel('Risk of death (%)')
         subpl.set_xlabel('Age (years)')
         subpl.set_title(self.bestName)

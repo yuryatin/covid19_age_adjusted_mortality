@@ -311,6 +311,7 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
     int repeatsWarning = 0;
     double positionPrev;
     double tempCoefficient;
+    double tempDropTermResult;
     double tempML;
     int firstFunction = 1;
     int resulting = 0;
@@ -406,7 +407,7 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
                 finalSigns[iFunc] = signs;
                 for (int i=0; i < 8; ++i) {
                     tempCoefficient = finalResults[iFunc][i];
-                    tempML = testFunc[func_g](130.0, 1, finalResults[iFunc][0],
+                    tempML = testFunc[func_g](80.0, 1, finalResults[iFunc][0],
                                                         finalResults[iFunc][1],
                                                         finalResults[iFunc][2],
                                                         finalResults[iFunc][3],
@@ -415,14 +416,15 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
                                                         finalResults[iFunc][6],
                                                         finalResults[iFunc][7]);
                     finalResults[iFunc][i] = 0.0;
-                    if (tempML != testFunc[func_g](130.0, 1, finalResults[iFunc][0],
-                                                             finalResults[iFunc][1],
-                                                             finalResults[iFunc][2],
-                                                             finalResults[iFunc][3],
-                                                             finalResults[iFunc][4],
-                                                             finalResults[iFunc][5],
-                                                             finalResults[iFunc][6],
-                                                             finalResults[iFunc][7]))
+                    tempDropTermResult = testFunc[func_g](80.0, 1, finalResults[iFunc][0],
+                                                                    finalResults[iFunc][1],
+                                                                    finalResults[iFunc][2],
+                                                                    finalResults[iFunc][3],
+                                                                    finalResults[iFunc][4],
+                                                                    finalResults[iFunc][5],
+                                                                    finalResults[iFunc][6],
+                                                                    finalResults[iFunc][7]);
+                    if (tempML != tempDropTermResult)
                         finalResults[iFunc][i] = tempCoefficient;
                 }
                 if(finalResults[iFunc][0]) finalResults[iFunc][0] *= pow(-1.0, (double) (signs & (unsigned char) 0b00000001));
