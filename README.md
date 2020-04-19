@@ -55,7 +55,7 @@ The Python script, when finishes, should both plot the best fitted curve and sav
 * WolframAlpha
 
 ## What's new in the version 2
-- The most radical change is that the package now fits the functions with arbitrary signs of coefficients. No need in hard coding those signs anymore. However, exhaustive fitting all of them will require significantly longer computation time. In the case of using this package for business application or adequately funded academic research, I highly recommend launching the calculation in the clould on a virtual machine with the largest number of CPU cores possible.
+- The most radical change is that the package now fits the functions with arbitrary signs of coefficients and arbitrary orders of the internal polynomial. No need in hard coding those signs and polynomials anymore. However, exhaustive fitting all of them will require significantly longer computation time. In the case of using this package for business application or adequately funded academic research, I highly recommend launching the calculation in the clould on a virtual machine with the largest number of CPU cores possible.
 - The terms in the equation minimized virtualy to zero during the fitting used to be left in the formula. Now they are removed automatically and the best fitted equations are reported without them.
 - The *fitFunctionWrapper()* function of the *deathcurve.py* module now returns one object of the *bestFit* class, not a tuple of two objects.
 - *reportModel()* and *plotModel()* turned into methods of the *bestFit* class from standalone functions.
