@@ -90,6 +90,7 @@ def main():
     # the function below is designed to import the case-by-case table from URL https://www.kaggle.com/kimjihoo/coronavirusdataset#PatientInfo.csv
     df = ingestData('PatientInfo.csv')
     print('{} cases were selected with {} deaths\n'.format(df.shape[0], df['outcome'].sum()))
+    # for functions with floor and ceiling the effective polynomial order is going to be two orders lower than what you pass with polynomial_order
     bestFunction = deathcurve.fitFunctionWrapper(df, signs = '++++++++', oneSignSet = False, functions = (0,2,4,6,8), polynomial_order = 5)   # when passing custom 'functions' parameter consisting of one integer, please remember to add a comma after it to count for a tuple: (1,) instead of (1)
     bestFunction.reportModel()
     bestFunction.plotModel()

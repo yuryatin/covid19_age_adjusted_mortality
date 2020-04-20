@@ -32,7 +32,7 @@ up to five arguments:
 - a tuple of integers with the numbers of functions you want to fit
   (starting at zero): e.g., (0,), (0, 3), (5, 2), (0, 1, 4, 5, 6, 7,
   8, 9)
-- an integer with the order of the internal polymonial, which can be in
+- an integer with the order of the internal polynomial, which can be in
   the range from 2 to 7
 
 It return an object of the class bestFit defined in the same wrapper
@@ -129,7 +129,7 @@ class bestFit():
         return output
         
     def output(self):
-        return self.outputText.format(self.outputLog('Python', bestFit.testFuncs[self.best].short), self.outputLog('Excel', bestFit.testFuncs[self.best].short), self.outputLog('Wolfram', bestFit.testFuncs[self.best].short), self.b6, self.b7, '0.0 if x < {:.6f} else '.format(ceil(-self.b0 * 1e6) * 1e-6) if self.b0 < 0.0 else '', format(ceil(-self.b0 * 1e6) * 1e-6))
+        return self.outputText.format(self.outputLog('Python', bestFit.testFuncs[self.best].short), self.outputLog('Excel', bestFit.testFuncs[self.best].short), self.outputLog('Wolfram', bestFit.testFuncs[self.best].short), self.b6, self.b7, '0.0 if x < {:.6f} else '.format(ceil(-self.b0 * 1e6) * 1e-6) if self.b0 < 0.0 else '', format(ceil(-self.b0 * 1e6) * 1e-6), self.submaxAge)
 
     def internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7):
         return b0 + b1 * x + b2 * (x ** 2) + b3 * (x ** 3) + b4 * (x ** 4) + b5 * (x ** 5) + b6 * (x ** 6) + b7 * (x ** 7)
@@ -223,34 +223,34 @@ class bestFit():
     testFuncsReports = [
                         '\n\n\tPython\n\tfrom scipy.special import erf\n\t{5:s}erf(math.log({0:s})) * 0.5 + 0.5\n\n\t' +
                         'Microsoft Excel\n\tERF(LN({1:s}))/2 + 0.5\n\n\t' +
-                        'WolframAlpha\n\tplot | erf(log({2:s}))/2 + 0.5 | x = {6:s} to 100\n\n',
+                        'WolframAlpha\n\tplot | erf(log({2:s}))/2 + 0.5 | x = {6:s} to {7:.0f}\n\n',
                         '\n\n\tPython\n\tfrom scipy.special import erf\n\t{5:s}erf(math.log({0:s})) * (0.5 - {4:e}) + 0.5 - {4:e} + {3:e}\n\n\t' +
                         'Microsoft Excel\n\tERF(LN({1:s})) * (0.5 - {4:e}) + 0.5 - {4:e} + {3:e}\n\n\t' +
-                        'WolframAlpha\n\tplot | erf(log({2:s})) * (0.5 - {4:e}) + 0.5 - {4:e} + {3:e} | x = {6:s} to 100\n\n',
+                        'WolframAlpha\n\tplot | erf(log({2:s})) * (0.5 - {4:e}) + 0.5 - {4:e} + {3:e} | x = {6:s} to {7:.0f}\n\n',
                         '\n\n\tPython\n\t{5:s}math.tanh(math.log({0:s}))/2 + 0.5\n\n\t' +
                         'Microsoft Excel\n\tTANH(LN({1:s}))/2 + 0.5\n\n\t' +
-                        'WolframAlpha\n\tplot | tanh(log({2:s}))/2 + 0.5 | x = {6:s} to 100\n\n',
+                        'WolframAlpha\n\tplot | tanh(log({2:s}))/2 + 0.5 | x = {6:s} to {7:.0f}\n\n',
                         '\n\n\tPython\n\t{5:s}math.tanh(math.log({0:s})) * (0.5 - {4:e}) + 0.5 - {4:e} + {3:e}\n\n\t' +
                         'Microsoft Excel\n\tTANH(LN({1:s})) * (0.5 - {4:e}) + 0.5 - {4:e} + {3:e}\n\n\t' +
-                        'WolframAlpha\n\tplot | tanh(log({2:s})) * (0.5 - {4:e}) + 0.5 - {4:e} + {3:e} | x = {6:s} to 100\n\n',
+                        'WolframAlpha\n\tplot | tanh(log({2:s})) * (0.5 - {4:e}) + 0.5 - {4:e} + {3:e} | x = {6:s} to {7:.0f}\n\n',
                         '\n\n\tPython\n\t{5:s}2.0 * math.atan(math.tanh(math.log({0:s})))/math.pi + 0.5\n\n\t' +
                         'Microsoft Excel\n\t2.0 * ATAN(TANH(LN({1:s})))/ PI() + 0.5\n\n\t' +
-                        'WolframAlpha\n\tplot | 2.0 * atan(tanh(log({2:s})))/pi + 0.5 | x = {6:s} to 100\n\n\n',
+                        'WolframAlpha\n\tplot | 2.0 * atan(tanh(log({2:s})))/pi + 0.5 | x = {6:s} to {7:.0f}\n\n\n',
                         '\n\n\tPython\n\t{5:s}4.0 * (0.5 - {4:e}) * math.atan(math.tanh(math.log({0:s})))/math.pi + 0.5 - {4:e} + {3:e}\n\n\t' +
                         'Microsoft Excel\n\t4.0 * (0.5 - {4:e}) * ATAN(TANH(LN({1:s})))/ PI() + 0.5 - {4:e} + {3:e}\n\n\t' +
-                        'WolframAlpha\n\tplot | 4.0 * (0.5 - {4:e}) * atan(tanh(log({2:s})))/pi + 0.5 - {4:e} + {3:e} | x = {6:s} to 100\n\n\n',
+                        'WolframAlpha\n\tplot | 4.0 * (0.5 - {4:e}) * atan(tanh(log({2:s})))/pi + 0.5 - {4:e} + {3:e} | x = {6:s} to {7:.0f}\n\n\n',
                         '\n\n\tPython\n\t{5:s}0.5 * (math.log({0:s}) )/((1 + (math.log({0:s}))**2)**0.5) + 0.5\n\n\t' +
                         'Microsoft Excel\n\t0.5 * (LN({1:s}) )/((1 + (LN({1:s}))^2)^0.5) + 0.5\n\n\t' +
-                        'WolframAlpha\n\tplot | 0.5 * (log({2:s}) )/((1 + (log({2:s}))^2)^0.5) + 0.5 | x = {6:s} to 100\n\n',
+                        'WolframAlpha\n\tplot | 0.5 * (log({2:s}) )/((1 + (log({2:s}))^2)^0.5) + 0.5 | x = {6:s} to {7:.0f}\n\n',
                         '\n\n\tPython\n\t{5:s}(0.5 - {4:e}) * (math.log({0:s}) )/((1 + (math.log({0:s}))**2)**0.5) + 0.5 - {4:e} + {3:e}\n\n\t' +
                         'Microsoft Excel\n\t(0.5 - {4:e}) * (LN({1:s}) )/((1 + (LN({1:s}))^2)^0.5) + 0.5 - {4:e} + {3:e}\n\n\t' +
-                        'WolframAlpha\n\tplot | (0.5 - {4:e}) * (log({2:s}) )/((1 + (log({2:s}))^2)^0.5) + 0.5 - {4:e} + {3:e} | x = {6:s} to 100\n\n',
+                        'WolframAlpha\n\tplot | (0.5 - {4:e}) * (log({2:s}) )/((1 + (log({2:s}))^2)^0.5) + 0.5 - {4:e} + {3:e} | x = {6:s} to {7:.0f}\n\n',
                         '\n\n\tPython\n\t{5:s}0.5 * (math.log({0:s}) )/(1 + abs(math.log({0:s}))) + 0.5\n\n\t' +
                         'Microsoft Excel\n\t0.5 * (LN({1:s}) )/(1 + ABS(LN({1:s}))) + 0.5\n\n\t' +
-                        'WolframAlpha\n\tplot | 0.5 * log({2:s})/(1 + abs(log({2:s}))) + 0.5 | x = {6:s} to 100\n\n',
+                        'WolframAlpha\n\tplot | 0.5 * log({2:s})/(1 + abs(log({2:s}))) + 0.5 | x = {6:s} to {7:.0f}\n\n',
                         '\n\n\tPython\n\t{5:s}(0.5 - {4:e}) * (math.log({0:s}) )/(1 + abs(math.log({0:s}))) + 0.5 - {4:e} + {3:e}\n\n\t' +
                         'Microsoft Excel\n\t(0.5 - {4:e}) * (LN({1:s}) )/(1 + ABS(LN({1:s}))) + 0.5 - {4:e} + {3:e}\n\n\t' +
-                        'WolframAlpha\n\tplot |  (0.5 - {4:e}) * log({2:s})/(1 + abs(log({2:s}))) + 0.5 - {4:e} + {3:e} | x = {6:s} to 100\n\n' ]
+                        'WolframAlpha\n\tplot |  (0.5 - {4:e}) * log({2:s})/(1 + abs(log({2:s}))) + 0.5 - {4:e} + {3:e} | x = {6:s} to {7:.0f}\n\n' ]
                         
     def function(self, x) -> float:
         return self.testFuncs[self.best](self, x)
@@ -265,7 +265,7 @@ class bestFit():
 
     def plotModel(self) -> None:
         # Plotting the graph
-        x = np.arange(0.01 if self.b0 <= 0.0 else self.b0 + 0.01, self.maxAge, 0.01)
+        x = np.arange(0.01 if self.b0 <= 0.0 else self.b0 + 0.01, self.submaxAge, 0.01)  # the scarcity of the cases in the upper end of the age range makes the tail very volitile, so it is trimmed a bit on the plot
         y = np.array([100.0 * self.function(i) for i in x])
 
         fig, subpl = plt.subplots( 1, 1, figsize=(7,6))
@@ -273,7 +273,7 @@ class bestFit():
         fig.set_figheight(6)
         fig.set_figwidth(7)
         subpl.plot(x, y)
-        subpl.set_xlim(0.0, self.maxAge)
+        subpl.set_xlim(0.0, self.submaxAge)
         subpl.set_ylim(0.0, y.max())
         subpl.set_ylabel('Risk of death (%)')
         subpl.set_xlabel('Age (years)')
@@ -285,22 +285,33 @@ class bestFit():
         fig.savefig("result.png")
         plt.show()
                         
-    def __init__(self, parameters: np.ndarray, functionNumber: int, sign: int, maxAge: float):
-        self.b0 = parameters[0]
-        self.b1 = parameters[1]
-        self.b2 = parameters[2]
-        self.b3 = parameters[3]
-        self.b4 = parameters[4]
-        self.b5 = parameters[5]
-        self.b6 = parameters[6]
-        self.b7 = parameters[7]
-        self.params = tuple(parameters[:8])
+    def __init__(self, parameters: np.ndarray, functionNumber: int, sign: int, submaxAge: float):
+        self.best = functionNumber
+        if functionNumber % 2:
+            self.b0 = parameters[2]
+            self.b1 = parameters[3]
+            self.b2 = parameters[4]
+            self.b3 = parameters[5]
+            self.b4 = parameters[6]
+            self.b5 = parameters[7]
+            self.b6 = parameters[0]
+            self.b7 = parameters[1]
+            self.params = tuple(parameters[2:8]) + tuple(parameters[:2])
+        else:
+            self.b0 = parameters[0]
+            self.b1 = parameters[1]
+            self.b2 = parameters[2]
+            self.b3 = parameters[3]
+            self.b4 = parameters[4]
+            self.b5 = parameters[5]
+            self.b6 = parameters[6]
+            self.b7 = parameters[7]
+            self.params = tuple(parameters[:8])
         self.ml = parameters[8]
         self.signs = sign
-        self.best = functionNumber
         self.bestName = bestFit.testFuncsNames[functionNumber]
         self.outputText = bestFit.testFuncsReports[functionNumber]
-        self.maxAge = maxAge
+        self.submaxAge = submaxAge
         
         
 def _strToSigns(signs: str) -> int:
@@ -312,6 +323,41 @@ def _strToSigns(signs: str) -> int:
 
 
 def fitFunctionWrapper(df: pd.DataFrame, signs: str = None, oneSignSet: bool = False, functions: Tuple = tuple(range(len(bestFit.testFuncs))), polynomial_order: int = 5) -> bestFit:
+    """
+    fitFunctionWrapper(df: pd.DataFrame, signs: str = None, oneSignSet:
+        bool = False, functions: Tuple = tuple(range(len(bestFit.testFuncs))),
+            polynomial_order: int = 5) -> bestFit
+    
+    The Python wrapper interface function fitFunctionWrapper() accepts
+    up to five arguments:
+    - a two-column pandas DataFrame (the only mandatory argument) with:
+      - the first column 'age' of the numpy numerical data type, e.g.,
+        numpy.float64 or numpy.intc (the float datatype allows to
+        accomodate data that specify full dates of birth instead of years
+        of birth)
+      - the second column 'outcome' of the numpy numerical data type, e.g.,
+        numpy.intc, where non-zero (e.g., 1) means death and zero means a
+        more positive outcome
+    - a string with signs for the up to eight coefficients (without
+      specifying, only positive coefficients are going to be fitted, as in
+      the package versions below 2.0), e.g., "++++++++", "-", "-+-+"
+    - a boolean argument specifying if you want to fit the coefficients
+      with the signs starting from those specified in the previous
+      parameter all the way to "--------" (False) or the signs specified in
+      the previous parameter only (True). The defaule is 'False'
+    - a tuple of integers with the numbers of functions you want to fit
+      (starting at zero): e.g., (0,), (0, 3), (5, 2), (0, 1, 4, 5, 6, 7,
+      8, 9)
+    - an integer with the order of the internal polynomial, which can be in
+      the range from 2 to 7
+
+    It return an object of the class bestFit defined in the same wrapper
+    module.
+    
+    Be careful: this function treats all "odd" fitted functions as if they
+    should have the floor and ceiling and, therefore, assings coefficients
+    differently from "even" fitted functions
+    """
     if not isinstance(polynomial_order, int):
         raise TypeError('argument \'polynomial_order\' of the function fitFunctionWrapper accepts only integers')
     if polynomial_order > 7 or polynomial_order < 2:
@@ -351,19 +397,23 @@ def fitFunctionWrapper(df: pd.DataFrame, signs: str = None, oneSignSet: bool = F
     # the second 9 values are reserved for the second best fitted function
     # among those 9, the first 8 are for the fitted coefficients and the 9th is for the (logarithmic) ML point estimate
     res = 0     # the variable to collect the number of the best fitted function from the C interface function
-    secondRes = np.zeros(1, dtype=np.intc)     # the variable to pass by reference to the C interface function to collect the number of the second best fitted function if necessary
-    sign1 = np.zeros(1, dtype=np.intc)
-    sign2 = np.zeros(1, dtype=np.intc)
+    
     if signs:
         sign1 = np.array(np.intc(_strToSigns(signs)))
+    else:
+        sign1 = np.zeros(1, dtype=np.intc)
+        
     if signs and oneSignSet:
         sign2 = np.array(np.intc(1))
+    else:
+        sign2 = np.zeros(1, dtype=np.intc)
+        
     functionsToFit = np.ascontiguousarray(np.zeros(10, dtype=np.intc))
     for i in range(len(bestFit.testFuncs)):
         if i in functions: functionsToFit[i] = 1
     clib = cdll.LoadLibrary(abspath('libdeathcurve.so'))      # loading the compiled binary shared C library, which should be located in the same directory as this Python script; absolute path is more important for Linux — not necessary for MacOS
     f = clib.fitFunction       # assigning the C interface function to this Python variable "f"
-    f.arguments = [ c_void_p, c_void_p, c_int, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_int ]         # declaring the data types for C function arguments
+    f.arguments = [ c_void_p, c_void_p, c_int, c_void_p, c_void_p, c_int, c_void_p, c_int ]         # declaring the data types for C function arguments
     f.restype = c_int      # declaring the data types for C function return value
-    res = f(c_void_p(age.ctypes.data), c_void_p(outcome.ctypes.data), age.size, c_void_p(output.ctypes.data), c_void_p(secondRes.ctypes.data), c_void_p(sign1.ctypes.data), c_void_p(sign2.ctypes.data), c_void_p(functionsToFit.ctypes.data), polynomial_order)   # calling the C interface function
-    return bestFit(output[:9], res, int(sign1), float(df['age'].max()))
+    res = f(c_void_p(age.ctypes.data), c_void_p(outcome.ctypes.data), age.size, c_void_p(output.ctypes.data), c_void_p(sign1.ctypes.data), sign2.ctypes.data, c_void_p(functionsToFit.ctypes.data), polynomial_order)   # calling the C interface function
+    return bestFit(output[:9], res, int(sign1), float(df['age'].sort_values(na_position='first').reset_index(drop=True).iloc[-2]))

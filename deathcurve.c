@@ -37,7 +37,7 @@ up to five arguments:
 - a tuple of integers with the numbers of functions you want to fit
   (starting at zero): e.g., (0,), (0, 3), (5, 2), (0, 1, 4, 5, 6, 7,
   8, 9)
-- an integer with the order of the internal polymonial, which can be in
+- an integer with the order of the internal polynomial, which can be in
   the range from 2 to 7
 
 It return an object of the class bestFit defined in the same wrapper
@@ -71,8 +71,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 
 /* The macro below was created instead of a function to avoid function call overhead */
-#define internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7) (pow(-1.0, (double) (signs & (unsigned char) 0b00000001)) * b0 + pow(-1.0, (double) ((signs & (unsigned char) 0b00000010) >> 1)) * b1 * x + pow(-1.0, (double) ((signs & (unsigned char) 0b00000100) >> 2)) * b2 * pow(x, 2.0) + pow(-1.0, (double) ((signs & (unsigned char) 0b00001000) >> 3)) * b3 * pow(x, 3.0) + pow(-1.0, (double) ((signs & (unsigned char) 0b00010000) >> 4)) * b4 * pow(x, 4.0) + pow(-1.0, (double) ((signs & (unsigned char) 0b00100000) >> 5)) * b5 * pow(x, 5.0) + pow(-1.0, (double) ((signs & (unsigned char) 0b01000000) >> 6)) * b6 * pow(x, 6.0) + pow(-1.0, (double) ((signs & (unsigned char) 0b10000000) >> 7)) * b7 * pow(x, 7.0))
-#define internalLogS(x, signs, b0, b1, b2, b3, b4, b5) (pow(-1.0, (double) (signs & (unsigned char) 0b00000001)) * b0 + pow(-1.0, (double) ((signs & (unsigned char) 0b00000010) >> 1)) * b1 * x + pow(-1.0, (double) ((signs & (unsigned char) 0b00000100) >> 2)) * b2 * pow(x, 2.0) + pow(-1.0, (double) ((signs & (unsigned char) 0b00001000) >> 3)) * b3 * pow(x, 3.0) + pow(-1.0, (double) ((signs & (unsigned char) 0b00010000) >> 4)) * b4 * pow(x, 4.0) + pow(-1.0, (double) ((signs & (unsigned char) 0b00100000) >> 5)) * b5 * pow(x, 5.0))
+#define internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7) (b0 + b1 * x + b2 * pow(x, 2.0) + b3 * pow(x, 3.0) + b4 * pow(x, 4.0) + b5 * pow(x, 5.0) + b6 * pow(x, 6.0) + b7 * pow(x, 7.0))
+#define internalLogS(x, signs, b0, b1, b2, b3, b4, b5) (b0 + b1 * x + b2 * pow(x, 2.0) + b3 * pow(x, 3.0) + b4 * pow(x, 4.0) + b5 * pow(x, 5.0))
 #define logVerified(x) ( (x <= 0.0) && (x >= 1.0) ? -DBL_MAX : log(x) )
 #define indexConverter(x) (1 + (x > 0 ? (int)pow(3,1) : 0) + (x > 1 ? (int)pow(3,2) : 0) + (x > 2 ? (int)pow(3,3) : 0) + (x > 3 ? (int)pow(3,4) : 0) + (x > 4 ? (int)pow(3,5) : 0) + (x > 5 ? (int)pow(3,6) : 0) + (x > 6 ? (int)pow(3,7) : 0))
 #define THREADS_MAX 6561   // 3 ^ 8 — the former is the number of tests for each parameter per step, the latter is the number of fitted parameters. So many threads don't significantly impede performance in practice (though you may want to reassess that) but will use whatever number of CPU cores and threads your laptop, workstation, or server has.
@@ -85,6 +85,8 @@ static char signString[9];
 static unsigned char signs;
 static int func_g, * outcome_g, length_g, precision_g, skip_g, start_g, order_g;
 static double b0_g, b1_g, b2_g, b3_g, b4_g, b5_g, b6_g, b7_g, * age_g, * result_g;
+/* variables to temporary hold the signs of coefficients within one 'sign' cycle were made global to avoid overhead of passing so many arguments for multiple times to an iterating function */
+static double s0_g, s1_g, s2_g, s3_g, s4_g, s5_g, s6_g, s7_g;
 
 /* The ten fitted functions */
 
@@ -97,7 +99,7 @@ static double erfLog(double x, int outcome, double b0, double b1, double b2, dou
 }
 
 static char funcName1[] = "Erf-derived function with floor and ceiling";
-static double erfLogFC(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
+static double erfLogFC(double x, int outcome, double b6, double b7, double b0, double b1, double b2, double b3, double b4, double b5){
     double result = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
     if (result <= 0.0) return -DBL_MAX;
     result = erf(log(result)) * (0.5 - b7) + 0.5 - b7 + b6;
@@ -113,7 +115,7 @@ static double hyperbTan(double x, int outcome, double b0, double b1, double b2, 
 }
 
 static char funcName3[] = "Logistic-derived function with floor and ceiling";
-static double hyperbTanFC(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
+static double hyperbTanFC(double x, int outcome, double b6, double b7, double b0, double b1, double b2, double b3, double b4, double b5){
     double result = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
     if (result <= 0.0) return -DBL_MAX;
     result = tanh(log(result)) * (0.5 - b7) + 0.5 - b7 + b6;
@@ -129,7 +131,7 @@ static double GudFunc(double x, int outcome, double b0, double b1, double b2, do
 }
 
 static char funcName5[] = "Gudermannian-derived function with floor and ceiling";
-static double GudFuncFC(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
+static double GudFuncFC(double x, int outcome, double b6, double b7, double b0, double b1, double b2, double b3, double b4, double b5){
     double result = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
     if (result <= 0.0) return -DBL_MAX;
     result = atan(tanh(log(result))) * M_1_PI * 4.0 * (0.5 - b7) + 0.5 - b7 + b6;
@@ -146,7 +148,7 @@ static double xOverX2(double x, int outcome, double b0, double b1, double b2, do
 }
 
 static char funcName7[] = "Algebraic function derived from x over sqrt(1 + x^2) with floor and ceiling";
-static double xOverX2FC(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
+static double xOverX2FC(double x, int outcome, double b6, double b7, double b0, double b1, double b2, double b3, double b4, double b5){
     double result = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
     if (result <= 0.0) return -DBL_MAX;
     double temp = log(result);
@@ -164,7 +166,7 @@ static double xOverAbs(double x, int outcome, double b0, double b1, double b2, d
 }
 
 static char funcName9[] = "Algebraic function derived from x over (1 + abs(x)) with floor and ceiling";
-static double xOverAbsFC(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
+static double xOverAbsFC(double x, int outcome, double b6, double b7, double b0, double b1, double b2, double b3, double b4, double b5){
     double result = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
     if (result <= 0.0) return -DBL_MAX;
     double temp = log(result);
@@ -177,31 +179,43 @@ static double (*testFunc[TOTAL_NUMBER_OF_FUNCTIONS])(double x, int outcome, doub
 
 static char * funcNames[TOTAL_NUMBER_OF_FUNCTIONS];
 
-static void convertSigns() {
+static void convertSigns(int func) {
     for (int i=0; i < 8; ++i)
         signString[i] = (signs & (unsigned char) pow(2, i)) ? '-' : '+';
+    if (func % 2) {
+        s6_g = (signs & (unsigned char) 0b00000001) ? -1.0 : 1.0;
+        s7_g = (signs & (unsigned char) 0b00000010) ? -1.0 : 1.0;
+        s0_g = (signs & (unsigned char) 0b00000100) ? -1.0 : 1.0;
+        s1_g = (signs & (unsigned char) 0b00001000) ? -1.0 : 1.0;
+        s2_g = (signs & (unsigned char) 0b00010000) ? -1.0 : 1.0;
+        s3_g = (signs & (unsigned char) 0b00100000) ? -1.0 : 1.0;
+        s4_g = (signs & (unsigned char) 0b01000000) ? -1.0 : 1.0;
+        s5_g = (signs & (unsigned char) 0b10000000) ? -1.0 : 1.0;
+    } else {
+        s0_g = (signs & (unsigned char) 0b00000001) ? -1.0 : 1.0;
+        s1_g = (signs & (unsigned char) 0b00000010) ? -1.0 : 1.0;
+        s2_g = (signs & (unsigned char) 0b00000100) ? -1.0 : 1.0;
+        s3_g = (signs & (unsigned char) 0b00001000) ? -1.0 : 1.0;
+        s4_g = (signs & (unsigned char) 0b00010000) ? -1.0 : 1.0;
+        s5_g = (signs & (unsigned char) 0b00100000) ? -1.0 : 1.0;
+        s6_g = (signs & (unsigned char) 0b01000000) ? -1.0 : 1.0;
+        s7_g = (signs & (unsigned char) 0b10000000) ? -1.0 : 1.0;
+    }
 }
 
 static void * getML(void * threadId) {
     result_g[(int)threadId] = 0.0;
-    int b0_l = (int)threadId / 2187 - 1;
-    int b1_l = (int)threadId % 2187 / 729 - 1;
-    int b2_l = (int)threadId % 729 / 243 - 1;
-    int b3_l = (int)threadId % 243 / 81 - 1;
-    int b4_l = (int)threadId % 81 / 27 - 1;
-    int b5_l = (int)threadId % 27 / 9 - 1;
-    int b6_l = (int)threadId % 9 / 3 - 1;
-    int b7_l = (int)threadId % 3 - 1;
     double precision_l = pow(10.0, -precision_g);
+    double b0_l = s0_g * pow(10.0, b0_g + ((int)threadId / 2187 - 1) * precision_l);
+    double b1_l = s1_g * pow(10.0, b1_g + ((int)threadId % 2187 / 729 - 1) * precision_l);
+    double b2_l = s2_g * pow(10.0, b2_g + ((int)threadId % 729 / 243 - 1) * precision_l);
+    double b3_l = s3_g * pow(10.0, b3_g + ((int)threadId % 243 / 81 - 1) * precision_l);
+    double b4_l = s4_g * pow(10.0, b4_g + ((int)threadId % 81 / 27 - 1) * precision_l);
+    double b5_l = s5_g * pow(10.0, b5_g + ((int)threadId % 27 / 9 - 1) * precision_l);
+    double b6_l = s6_g * pow(10.0, b6_g + ((int)threadId % 9 / 3 - 1) * precision_l);
+    double b7_l = s7_g * pow(10.0, b7_g + ((int)threadId % 3 - 1) * precision_l);
     for (int i = 0; i < length_g; ++i)
-        result_g[(int)threadId] += testFunc[func_g](age_g[i], outcome_g[i], pow(10.0, b0_g + b0_l * precision_l),
-                                            pow(10.0, b1_g + b1_l * precision_l),
-                                            pow(10.0, b2_g + b2_l * precision_l),
-                                            pow(10.0, b3_g + b3_l * precision_l),
-                                            pow(10.0, b4_g + b4_l * precision_l),
-                                            pow(10.0, b5_g + b5_l * precision_l),
-                                            pow(10.0, b6_g + b6_l * precision_l),
-                                            pow(10.0, b7_g + b7_l * precision_l));
+        result_g[(int)threadId] += testFunc[func_g](age_g[i], outcome_g[i], b0_l, b1_l , b2_l, b3_l, b4_l, b5_l, b6_l, b7_l);
     return (void *) (intptr_t) 0;
 }
 
@@ -246,7 +260,7 @@ static int oneStep(int func, double * result, double * age, int * outcome, int l
 }
 
 /* the function that needs to be called from the Python (wrapper) script */
-int fitFunction(double * ages, int * the_outcomes, int length, double * output, int * secondRes, int * sign1, int * sign2, int * functionsToTest, int polyn_order) {
+int fitFunction(double * ages, int * the_outcomes, int length, double * output, int * sign1, int sign2, int * functionsToTest, int polyn_order) {
     order_g = 8 - polyn_order;
     start_g = ((int) pow(3, 7 - polyn_order)) / 2;
     skip_g = (int) pow(3, 7 - polyn_order);
@@ -281,23 +295,16 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
     int position = 0;
     /* Initial parameters (powers of coefficients), which can be changed.
     Both the speed of fitting and the local maximum where you're gonna get stuck highly depend on the choice of these initial parameters.
-    Play with them to get better fitting. */
-    double b0_input_seed = -13.7895;
-    double b1_input_seed = -2.5031;
-    double b2_input_seed = polyn_order > 1 ? -4.3979 : -300.0;
-    double b3_input_seed = polyn_order > 2 ? -7.7828 : -300.0;
-    double b4_input_seed = polyn_order > 3 ? -18.3195 : -300.0;
-    double b5_input_seed = polyn_order > 4 ? -19.7568 : -300.0;
-    double b6_input_seed = polyn_order > 5 ? -26.0665 : -300.0;
-    double b7_input_seed = polyn_order > 6 ? -31.0665 : -300.0;
-    /* double b0_input_seed = -13.9234;
-    double b1_input_seed = -2.5907;
-    double b2_input_seed = polyn_order > 1 ? -4.4888 : -300.0;
-    double b3_input_seed = polyn_order > 2 ? -18.2855 : -300.0;
-    double b4_input_seed = polyn_order > 3 ? -22.5474 : -300.0;
-    double b5_input_seed = polyn_order > 4 ? -78.2407 : -300.0;
-    double b6_input_seed = polyn_order > 5 ? -82.5504 : -300.0;
-    double b7_input_seed = polyn_order > 6 ? -87.5504 : -300.0; */
+    Play with them to get better fitting.
+    This especially critical for negative coefficients of higher orders - starting with a too high negative coefficient will result in -inf and prevent any fitting */
+    double b0_input_seed = -10.0;                               // for the functions with the floor and ceiling, this is the floor coefficient, not beta0
+    double b1_input_seed = -2.4152;                             // for the functions with the floor and ceiling, this is the ceiling coefficient, not beta1
+    double b2_input_seed = polyn_order > 1 ? -3.8847 : -300.0;  // for the functions with the floor and ceiling, this is beta0, not beta2
+    double b3_input_seed = polyn_order > 2 ? -10.0 : -300.0;    // for the functions with the floor and ceiling, this is beta1, not beta3
+    double b4_input_seed = polyn_order > 3 ? -7.1689 : -300.0;  // for the functions with the floor and ceiling, this is beta2, not beta4
+    double b5_input_seed = polyn_order > 4 ? -9.2629 : -300.0;  // for the functions with the floor and ceiling, this is beta3, not beta5
+    double b6_input_seed = polyn_order > 5 ? -26.0 : -300.0;    // for the functions with the floor and ceiling, this is beta4, not beta6
+    double b7_input_seed = polyn_order > 6 ? -31.0 : -300.0;    // for the functions with the floor and ceiling, this is beta5, not beta7
     double b0_input, b1_input, b2_input, b3_input, b4_input, b5_input, b6_input, b7_input;
     int b0_index = 0;
     int b1_index = 0;
@@ -323,7 +330,7 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
         }
         signs = (unsigned char) * sign1;
         while(1) {
-            convertSigns();
+            convertSigns(iFunc);
             b0_input = b0_input_seed;
             b1_input = b1_input_seed;
             b2_input = b2_input_seed;
@@ -438,7 +445,7 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
             }
             printf("\t\tML is %20.16f\n", result);
             fflush(stdout);
-            if (* sign2) break;
+            if (sign2) break;
             if (signs == (unsigned char) pow(2, polyn_order + 1) - 1) break;
             ++signs;
             if (iFunc % 2 && (signs & (unsigned char) 0b11000000)) break;
@@ -460,7 +467,7 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
     /* the output below help compare the ten functions in terms of their fit to the data */
     for (int iFunc = START_FUNCTION - 1; iFunc < STOP_FUNCTION; ++iFunc) {
         signs = finalSigns[iFunc];
-        convertSigns();
+        convertSigns(iFunc);
         if (!functionsToTest[iFunc]) continue;
         printf("\nFunction %i:\t\t%s\n\tML estimate:\t%.16f\n\tParameters:\t%.6e %.6e %.6e %.6e %.6e %.6e %.6e %.6e\n\tSigns:\t\tx%02x\t%s\n",
                iFunc,
