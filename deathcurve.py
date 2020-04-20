@@ -88,7 +88,7 @@ from typing import Tuple
 class bestFit():
 
     formats = dict(Python=['*x','*(x**{:d})'],
-                   Excel=['*A1','*(A1**{:d})'],
+                   Excel=['*A1','*(A1^{:d})'],
                    Wolfram=[' x',' x^{:d}'])
 
     def outputLog(self, format, short = False):
