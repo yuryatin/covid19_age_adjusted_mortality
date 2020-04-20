@@ -16,7 +16,7 @@ The Python wrapper interface function *fitFunctionWrapper()* accepts up to five 
 - a string with signs for the up to eight coefficients (without specifying, only positive coefficients are going to be fitted, as in the package versions below 2.0), e.g., "++++++++", "-", "-+-+"
 - a boolean argument specifying if you want to fit the coefficients with the signs starting from those specified in the previous parameter all the way to "--------" (*False*) or the signs specified in the previous parameter only (*True*). The defaule is 'False'
 - a tuple of integers with the numbers of functions you want to fit (starting at zero): e.g., (0,), (0, 3), (5, 2), (0, 1, 4, 5, 6, 7, 8, 9)
-- an integer with the order of the internal polynomial, which can be in the range from 2 to 7 (restricting the order for the functions' variants with the floor and ceiling (functions 1, 3, 5, 7, 9) is currently not supported)
+- an integer with the order of the internal polynomial, which can be in the range from 2 to 7 (for "odd" fitted functions, the effective order of the polynomial is two orders lower, because the first two coefficients are reserved for estimating the level of the floor and the ceiling)
 
 It returns an object of the class *bestFit* defined in the same wrapper module.
 
