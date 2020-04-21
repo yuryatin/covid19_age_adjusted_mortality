@@ -66,6 +66,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import numpy as np
 import pandas as pd
 import deathcurve
+from datetime import timedelta
 
 
 # the function below is designed to import the case-by-case table from URL https://www.kaggle.com/kimjihoo/coronavirusdataset#PatientInfo.csv
@@ -79,6 +80,7 @@ def ingestData(dataFile: str) -> pd.DataFrame:
     latestDate = df[['symptom_onset_date','confirmed_date','deceased_date','released_date']].max(skipna=True).max()
     df['earliest_date'] = df[['symptom_onset_date','confirmed_date']].min(skipna=True, axis=1)
     df['death_on_date'] = df['deceased_date'] - df['earliest_date']
+    print('Days to death:\t90th percentile\t{0:.1f}\tselected to trim the most recent cases from the dataset\n\t\t95th percentile\t{1:.1f}\n\t\t98th percentile\t{2:.1f}\n'.format(df['death_on_date'].dropna().quantile(.90)/timedelta(days=1), df['death_on_date'].dropna().quantile(.95)/timedelta(days=1), df['death_on_date'].dropna().quantile(.98)/timedelta(days=1)))
     df = df[(latestDate - df.earliest_date > df['death_on_date'].dropna().quantile(.90)) & (df.birth_year.isna()==False)]    # it was an arbitrary decision to remove all cases that are younger than 90%-percentile of days-to-death from first symptoms or diagnosis confirmation whichever is earlier. You can adjust it with a more rigorous rationale. If all cases are left, (especially on the rising pandemics) the mortality is expected to be underestimated
     df['age'] = 2020 - df['birth_year']       # in case the dataset has full birth dates instead of birth years, the data type for this variable was left float64/double both in numpy/pandas and the shared C library
     df['outcome'] = np.where(df.state == 'deceased', 1, 0)
