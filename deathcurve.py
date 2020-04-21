@@ -404,9 +404,9 @@ def fitFunctionWrapper(df: pd.DataFrame, signs: str = None, oneSignSet: bool = F
         sign1 = np.zeros(1, dtype=np.intc)
         
     if signs and oneSignSet:
-        sign2 = np.array(np.intc(1))
+        sign2 = c_int(1)
     else:
-        sign2 = np.zeros(1, dtype=np.intc)
+        sign2 = c_int(0)
         
     functionsToFit = np.ascontiguousarray(np.zeros(10, dtype=np.intc))
     for i in range(len(bestFit.testFuncs)):
@@ -415,5 +415,5 @@ def fitFunctionWrapper(df: pd.DataFrame, signs: str = None, oneSignSet: bool = F
     f = clib.fitFunction       # assigning the C interface function to this Python variable "f"
     f.arguments = [ c_void_p, c_void_p, c_int, c_void_p, c_void_p, c_int, c_void_p, c_int ]         # declaring the data types for C function arguments
     f.restype = c_int      # declaring the data types for C function return value
-    res = f(c_void_p(age.ctypes.data), c_void_p(outcome.ctypes.data), age.size, c_void_p(output.ctypes.data), c_void_p(sign1.ctypes.data), sign2.ctypes.data, c_void_p(functionsToFit.ctypes.data), polynomial_order)   # calling the C interface function
+    res = f(c_void_p(age.ctypes.data), c_void_p(outcome.ctypes.data), age.size, c_void_p(output.ctypes.data), c_void_p(sign1.ctypes.data), sign2, c_void_p(functionsToFit.ctypes.data), polynomial_order)   # calling the C interface function
     return bestFit(output[:9], res, int(sign1), float(df['age'].sort_values(na_position='first').reset_index(drop=True).iloc[-2]))
