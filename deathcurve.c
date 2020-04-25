@@ -71,9 +71,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 
 /* The macro below was created instead of a function to avoid function call overhead */
-#define internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7) (b0 + b1 * x + b2 * pow(x, 2.0) + b3 * pow(x, 3.0) + b4 * pow(x, 4.0) + b5 * pow(x, 5.0) + b6 * pow(x, 6.0) + b7 * pow(x, 7.0))
-#define internalLogS(x, signs, b0, b1, b2, b3, b4, b5) (b0 + b1 * x + b2 * pow(x, 2.0) + b3 * pow(x, 3.0) + b4 * pow(x, 4.0) + b5 * pow(x, 5.0))
-#define logVerified(x) ( (x <= 0.0) && (x >= 1.0) ? -DBL_MAX : log(x) )
+#define internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7) (b0 + b1 * x + b2 * pow(x, 2.0) + b3 * pow(x, 3.0) + b4 * pow(x, 4.0) + b5 * pow(x, 5.0) + b6 * pow(x, 6.0) + b7 * pow(x, 7.0))
+#define internalLogS(x, b0, b1, b2, b3, b4, b5) (b0 + b1 * x + b2 * pow(x, 2.0) + b3 * pow(x, 3.0) + b4 * pow(x, 4.0) + b5 * pow(x, 5.0))
+#define logVerified(x) ( (x <= 0.0) || (x > 1.0) ? -DBL_MAX : log(x) )
 #define indexConverter(x) (1 + (x > 0 ? (int)pow(3,1) : 0) + (x > 1 ? (int)pow(3,2) : 0) + (x > 2 ? (int)pow(3,3) : 0) + (x > 3 ? (int)pow(3,4) : 0) + (x > 4 ? (int)pow(3,5) : 0) + (x > 5 ? (int)pow(3,6) : 0) + (x > 6 ? (int)pow(3,7) : 0))
 #define THREADS_MAX 6561   // 3 ^ 8 — the former is the number of tests for each parameter per step, the latter is the number of fitted parameters. So many threads don't significantly impede performance in practice (though you may want to reassess that) but will use whatever number of CPU cores and threads your laptop, workstation, or server has.
 #define START_FUNCTION 1   // this can be used to "hardcode" to fit fewer functions than added to this code
@@ -92,7 +92,7 @@ static double s0_g, s1_g, s2_g, s3_g, s4_g, s5_g, s6_g, s7_g;
 
 static char funcName0[] = "Erf-derived function";
 static double erfLog(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double result = internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7);
+    double result = internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7);
     if (result <= 0.0) return -DBL_MAX;
     result = erf(log(result)) * 0.5 + 0.5;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
@@ -100,7 +100,7 @@ static double erfLog(double x, int outcome, double b0, double b1, double b2, dou
 
 static char funcName1[] = "Erf-derived function with floor and ceiling";
 static double erfLogFC(double x, int outcome, double b6, double b7, double b0, double b1, double b2, double b3, double b4, double b5){
-    double result = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
+    double result = internalLogS(x, b0, b1, b2, b3, b4, b5);
     if (result <= 0.0) return -DBL_MAX;
     result = erf(log(result)) * (0.5 - b7) + 0.5 - b7 + b6;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
@@ -108,7 +108,7 @@ static double erfLogFC(double x, int outcome, double b6, double b7, double b0, d
 
 static char funcName2[] = "Logistic-derived function";
 static double hyperbTan(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double result = internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7);
+    double result = internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7);
     if (result <= 0.0) return -DBL_MAX;
     result = tanh(log(result)) * 0.5 + 0.5;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
@@ -116,7 +116,7 @@ static double hyperbTan(double x, int outcome, double b0, double b1, double b2, 
 
 static char funcName3[] = "Logistic-derived function with floor and ceiling";
 static double hyperbTanFC(double x, int outcome, double b6, double b7, double b0, double b1, double b2, double b3, double b4, double b5){
-    double result = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
+    double result = internalLogS(x, b0, b1, b2, b3, b4, b5);
     if (result <= 0.0) return -DBL_MAX;
     result = tanh(log(result)) * (0.5 - b7) + 0.5 - b7 + b6;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
@@ -124,7 +124,7 @@ static double hyperbTanFC(double x, int outcome, double b6, double b7, double b0
 
 static char funcName4[] = "Gudermannian-derived function";
 static double GudFunc(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double result = internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7);
+    double result = internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7);
     if (result <= 0.0) return -DBL_MAX;
     result = atan(tanh(log(result))) * M_1_PI * 2.0 + 0.5;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
@@ -132,7 +132,7 @@ static double GudFunc(double x, int outcome, double b0, double b1, double b2, do
 
 static char funcName5[] = "Gudermannian-derived function with floor and ceiling";
 static double GudFuncFC(double x, int outcome, double b6, double b7, double b0, double b1, double b2, double b3, double b4, double b5){
-    double result = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
+    double result = internalLogS(x, b0, b1, b2, b3, b4, b5);
     if (result <= 0.0) return -DBL_MAX;
     result = atan(tanh(log(result))) * M_1_PI * 4.0 * (0.5 - b7) + 0.5 - b7 + b6;
     return outcome ? logVerified(result) : logVerified(1.0 - result);
@@ -140,7 +140,7 @@ static double GudFuncFC(double x, int outcome, double b6, double b7, double b0, 
 
 static char funcName6[] = "Algebraic function derived from x over sqrt(1 + x^2)";
 static double xOverX2(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double result = internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7);
+    double result = internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7);
     if (result <= 0.0) return -DBL_MAX;
     double temp = log(result);
     result = temp * pow(1.0 + pow(temp, 2.0), -0.5) * 0.5 + 0.5;
@@ -149,7 +149,7 @@ static double xOverX2(double x, int outcome, double b0, double b1, double b2, do
 
 static char funcName7[] = "Algebraic function derived from x over sqrt(1 + x^2) with floor and ceiling";
 static double xOverX2FC(double x, int outcome, double b6, double b7, double b0, double b1, double b2, double b3, double b4, double b5){
-    double result = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
+    double result = internalLogS(x, b0, b1, b2, b3, b4, b5);
     if (result <= 0.0) return -DBL_MAX;
     double temp = log(result);
     result = temp * pow(1.0 + pow(temp, 2.0), -0.5) * (0.5 - b7) + 0.5 - b7 + b6;
@@ -158,7 +158,7 @@ static double xOverX2FC(double x, int outcome, double b6, double b7, double b0, 
 
 static char funcName8[] = "Algebraic function derived from x over (1 + abs(x))";
 static double xOverAbs(double x, int outcome, double b0, double b1, double b2, double b3, double b4, double b5, double b6, double b7){
-    double result = internalLogL(x, signs, b0, b1, b2, b3, b4, b5, b6, b7);
+    double result = internalLogL(x, b0, b1, b2, b3, b4, b5, b6, b7);
     if (result <= 0.0) return -DBL_MAX;
     double temp = log(result);
     result = temp / (1 +fabs(temp)) * 0.5 + 0.5;
@@ -167,7 +167,7 @@ static double xOverAbs(double x, int outcome, double b0, double b1, double b2, d
 
 static char funcName9[] = "Algebraic function derived from x over (1 + abs(x)) with floor and ceiling";
 static double xOverAbsFC(double x, int outcome, double b6, double b7, double b0, double b1, double b2, double b3, double b4, double b5){
-    double result = internalLogS(x, signs, b0, b1, b2, b3, b4, b5);
+    double result = internalLogS(x, b0, b1, b2, b3, b4, b5);
     if (result <= 0.0) return -DBL_MAX;
     double temp = log(result);
     result = temp / (1 +fabs(temp)) * (0.5 - b7) + 0.5 - b7 + b6;
