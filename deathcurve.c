@@ -446,7 +446,7 @@ int fitFunction(double * ages, int * the_outcomes, int length, double * output, 
             printf("\t\tML is %20.16f\n", result);
             fflush(stdout);
             if (sign2) break;
-            if (signs == (unsigned char) pow(2, polyn_order + 1) - 1) break;
+            if (signs == (unsigned char) (pow(2, polyn_order + 1) - 1)) break;
             ++signs;
             if (iFunc % 2 && (signs & (unsigned char) 0b11000000)) break;
             if ((fp = fopen("stop.txt", "r")) != NULL) {
