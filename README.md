@@ -8,6 +8,8 @@ This software was desinged in two parts: a shared C library to dramatically spee
 
 The shared C library provides the opportunity to test arbitrary functions on condition that, in the domain between 0 and 120+, they return values between 0.0 and 1.0 — otherwise, in this scenario, it will make no sense.
 
+The latest curves are also published for download at https://zenodo.org/record/3787931
+
 ## Python wrapper interface function
 The Python wrapper interface function *fitFunctionWrapper()* accepts up to five arguments:
 - a two-column *pandas DataFrame* (the only mandatory argument) with:
