@@ -71,8 +71,8 @@ from datetime import timedelta
 
 # the function below is designed to import the case-by-case table from URL https://www.kaggle.com/kimjihoo/coronavirusdataset#PatientInfo.csv
 # to preprocess other data sources, it should be modified
-def ingestData(dataFile: str) -> pd.DataFrame:
-    df = pd.read_csv(dataFile)[['birth_year','symptom_onset_date','confirmed_date','state','released_date','deceased_date']]
+def ingestData(dataFile: str, gender: str = 'both') -> pd.DataFrame:
+    df = pd.read_csv(dataFile)[['birth_year','symptom_onset_date','confirmed_date','state','released_date','deceased_date','sex']]
     df[['symptom_onset_date']] = pd.to_datetime(df['symptom_onset_date'], errors='coerce')
     df[['confirmed_date']] = pd.to_datetime(df['confirmed_date'], errors='coerce')
     df[['deceased_date']] = pd.to_datetime(df['deceased_date'], errors='coerce')
@@ -85,15 +85,18 @@ def ingestData(dataFile: str) -> pd.DataFrame:
     df['age'] = 2020 - df['birth_year']       # in case the dataset has full birth dates instead of birth years, the data type for this variable was left float64/double both in numpy/pandas and the shared C library
     df['outcome'] = np.where(df.state == 'deceased', 1, 0)
     df['age'] = np.where(df.age == 0.0, 1e-8, df.age)
+    if gender == 'both':
+        return df[['age','outcome']]
+    df = df[df.sex == gender]
     return df[['age','outcome']]
 
 
 def main():
     # the function below is designed to import the case-by-case table from URL https://www.kaggle.com/kimjihoo/coronavirusdataset#PatientInfo.csv
-    df = ingestData('PatientInfo.csv')
+    df = ingestData('PatientInfo.csv', gender='both')
     print('{} cases were selected with {} deaths\n'.format(df.shape[0], df['outcome'].sum()))
     # for functions with floor and ceiling the effective polynomial order is going to be two orders lower than what you pass with polynomial_order
-    bestFunction = deathcurve.fitFunctionWrapper(df, signs = '++++++++', oneSignSet = False, functions = (0,2,4,6,8), polynomial_order = 5)   # when passing custom 'functions' parameter consisting of one integer, please remember to add a comma after it to count for a tuple: (1,) instead of (1)
+    bestFunction = deathcurve.fitFunctionWrapper(df, signs = '++++++++', oneSignSet = False, functions = (0,2,4), polynomial_order = 5)   # when passing custom 'functions' parameter consisting of one integer, please remember to add a comma after it to count for a tuple: (1,) instead of (1)
     bestFunction.reportModel()
     bestFunction.plotModel()
     
